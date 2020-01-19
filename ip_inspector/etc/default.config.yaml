@@ -1,0 +1,70 @@
+default:
+  # Directory where all databases and working files are stored
+  data_dir: 'data'
+
+  # If alert is true, generate an alert with any configured alert modules
+  # when a detection is made
+  alert: False
+
+  # default blacklist locations - case matters for keys and should match field_map_keys
+  blacklists:
+    # By Organization name
+    ORG: 'etc/org_blacklist.txt'
+    # By ASN
+    ASN: 'etc/asn_blacklist.txt'
+    # By country
+    Country: 'etc/country_blacklist.txt'
+    # By network or IP
+    Network: 'etc/network_blacklist.txt'
+
+  # default whitelist locations
+  whitelists:
+    org: 'etc/org_whitelist.txt'
+    asn: 'etc/asn_whitelist.txt'
+    network: 'etc/network_whitelist.txt'
+
+maxmind:
+  account_number:
+  # You will need to register with MaxMind for a free license key: https://www.maxmind.com/en/geolite2/signup
+  license_key:
+  # use system proxy settings
+  use_proxy: true
+  # use os cert store to verify ssl
+  verify_ssl: true
+
+  database_names:
+    # List of the databases MaxMind provides for free
+    - 'GeoLite2-ASN'
+    - 'GeoLite2-City'
+    - 'GeoLite2-Country'
+
+  download_url: 'https://download.maxmind.com/app/geoip_download?edition_id={DATABASE_NAME}&license_key={LICENSE_KEY}&suffix=tar.gz'
+  md5_verification_url: 'https://download.maxmind.com/app/geoip_download?edition_id={DATABASE_NAME}&license_key={LICENSE_KEY}&suffix=tar.gz.md5'
+
+  local_database_files:
+    # Default location for storing database files
+    # local and relative to where the code lives
+    asn: '{DATA_DIR}/GeoLite2-ASN.mmdb'
+    city: '{DATA_DIR}/GeoLite2-City.mmdb'
+    country: '{DATA_DIR}/GeoLite2-Country.mmdb'
+
+  system_default_database_files:
+    # These are default locations for GeoLite2 Country, City, and ASN databases 
+    asn: '/usr/share/GeoIP/GeoLite2-ASN.mmdb'
+    city: '/usr/share/GeoIP/GeoLite2-City.mmdb'
+    country: '/usr/share/GeoIP/GeoLite2-Country.mmdb'
+
+  field_map_keys:
+    # The default fields: i.e., the more valuable fields commonly desired to see
+    # these names get mapped to their sometimes nested values in the data
+    - 'IP'
+    - 'ASN'
+    - 'ORG'
+    - 'Continent'
+    - 'Country'
+    - 'Region'
+    - 'City'
+    - 'Time Zone'
+    - 'Latitude'
+    - 'Longitude'
+    - 'Accuracy Radius'

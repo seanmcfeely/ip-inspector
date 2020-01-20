@@ -43,7 +43,9 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'], database_name
 
     logging.info("Updating MaxMind databases.")
     if not license_key:
-        logging.error("Missing MaxMind License Key. Sign up for a free key:  https://www.maxmind.com/en/geolite2/signup")
+        note = ("Missing MaxMind License Key. Sign up for a free key:  https://www.maxmind.com/en/geolite2/signup"
+                "\n\tThen save the key with `ip-inspector -lk value-of-key-here`")
+        logging.error(note)
         return False
     if not database_names:
         logging.error("No databases specified to update.")
@@ -204,11 +206,19 @@ class MaxMind_IP(object):
 class Client():
 
     def __init__(self,
-                 database_files=CONFIG['maxmind']['local_database_files']
+                 database_files=CONFIG['maxmind']['local_database_files'],
+                 system_database_files=CONFIG['maxmind']['system_default_database_files']
                  ):
         # complete the file paths
         for db in database_files:
-            database_files[db] = os.path.join(HOME_PATH, database_files[db].format(DATA_DIR=DATA_DIR))
+            local_db = os.path.join(HOME_PATH, database_files[db].format(DATA_DIR=DATA_DIR))
+            if os.path.exists(local_db):
+                database_files[db] = local_db
+            elif os.path.exists(system_database_files[db]):
+                logging.warning("Local {} Database not found at '{}' -- using system db at {}".format(db, local_db, system_database_files[db]))
+                database_files[db] = system_database_files[db]
+            else:
+                logging.exception("Couldn't find local or system '{}' database".format(db))
 
         self.asn_reader = geoip2.database.Reader(database_files['asn'])
         self.city_reader = geoip2.database.Reader(database_files['city'])

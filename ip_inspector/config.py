@@ -36,14 +36,14 @@ def _load_saved(saved_config_path=SAVED_CONFIG_PATH):
             logging.warning("Problem loading saved configuration file: {}".format(e))
     return saved
 
-def load(config_path=None):
-    """Load YAML config files. The default config is always loaded first, then any saved
-       configuration items, then any valid config_path later configs will override values found in earlier configs.
+def load(config_path=None, saved_config_path=SAVED_CONFIG_PATH):
+    """Load configuration files. The default YAML config is always loaded first. Next, any saved overrides or non-default
+       configuration items are loaded from any local json file at saved_config_path. Finally, any valid config_path passed will be loaded last.
+       Later configs will override values found in earlier configs.
 
     :param config_paths (str): Path to a yaml configuration file to override defaults.
+    :param saved_config_path (str): Path to a saved json configuration at a location different than the default.
     """
-    #user_config = os.path.join(os.path.expanduser("~"), '.config', 'ip-inspector.yaml')
-
     def _load_this_(config_path):
         config = None
         try:
@@ -58,7 +58,7 @@ def load(config_path=None):
     config = _load_this_(DEFAULT_CONFIG_PATH)
 
     # load any saved overrides and update
-    config = update(config, _load_saved())
+    config = update(config, _load_saved(saved_config_path))
 
     # load any passed yaml config
     if config_path:
@@ -72,6 +72,7 @@ def save(item, config_path=SAVED_CONFIG_PATH):
     """Save configuration overrides to a local json config file.
 
     :param update (dict): A dictionary containing the key values to be updated.
+    :param config_path (str): The path to save the json config to.
     """
     saved = _load_saved(config_path)
     new_saved = update(saved, item)

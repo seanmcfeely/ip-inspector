@@ -6,7 +6,9 @@ default:
   # when a detection is made
   alert: False
 
-  # default blacklist locations - case matters for keys and should match field_map_keys
+  # Case matters for blacklists and whitelists keys. Keys should match a key in field_map_keys if it's in the field map.
+  ## The network blacklist is an example of an exception.
+  # default blacklist locations
   blacklists:
     # By Organization name
     ORG: 'etc/org_blacklist.txt'

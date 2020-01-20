@@ -54,8 +54,11 @@ def main():
         config = CONFIG
 
     if args.license_key:
+        data = {}
+        data['maxmind'] = {'license_key': args.license_key}
+        save(data)
+        # put it in the right place so this session can continue
         config['maxmind']['license_key'] = args.license_key
-        save(config)
     
     if args.update_databases:
         maxmind.update_databases(license_key=config['maxmind']['license_key'])

@@ -61,10 +61,11 @@ def main():
         config['maxmind']['license_key'] = args.license_key
     
     if args.update_databases:
-        maxmind.update_databases(license_key=config['maxmind']['license_key'])
+        if not maxmind.update_databases(license_key=config['maxmind']['license_key']):
+            return 1
 
     #mmc = maxmind.Client()
-    mmc = Inspector(maxmind.Client())
+    mmc = Inspector(maxmind.Client(license_key=config['maxmind']['license_key']))
 
     '''
     if args.command == 'blacklist':

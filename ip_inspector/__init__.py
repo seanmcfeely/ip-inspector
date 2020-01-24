@@ -53,7 +53,7 @@ class Inspected_IP(maxmind.MaxMind_IP):
 
 class Inspector():
     """An a computer network inspector for the primary purpose of
-       Intel & Detection. Wrapper around MaxMind.Client.
+       Intel & Detection. Wrapper around maxmind.Client.
 
     :intel_agents: API objects to query for resources.
     :blacklists: Detection files.
@@ -61,13 +61,14 @@ class Inspector():
     """
 
     def __init__(self,
-                 mmc=maxmind.Client(),
+                 mmc: maxmind.Client,
                  blacklists=CONFIG['default']['blacklists'],
                  whitelists=CONFIG['default']['whitelists']
                  ):
        
         self.mmc = mmc
         self.blacklists = {}
+        self.whitelists = {}
         for bl_type, bl_path in blacklists.items():
             full_path = bl_path
             if not os.path.exists(full_path):
@@ -77,7 +78,15 @@ class Inspector():
                     continue
             with open(full_path, 'r') as fp:
                 self.blacklists[bl_type] = [line.strip() for line in fp.readlines()]
-            #self.blacklists[bl_type] = [line.strip() for line in self.blacklists[bl_type]]
+        for wl_type, wl_path in whitelists.items():
+            full_path = wl_path
+            if not os.path.exists(full_path):
+                full_path = os.path.join(HOME_PATH, full_path)
+                if not os.path.exists(full_path):
+                    logging.debug("No {} whitelist found at {} or {}".format(wl_type, wl_path, full_path))
+                    continue
+            with open(full_path, 'r') as fp:
+                self.whitelists[wl_type] = [line.strip() for line in fp.readlines()]
 
 
     def inspect(self, ip):
@@ -92,7 +101,10 @@ class Inspector():
                 if IIP.get(blacklist_type) in self.blacklists[blacklist_type]:
                     logging.debug("Blacklisted {} for {} : {}".format(blacklist_type, ip, IIP.get(blacklist_type)))
                     IIP.set_blacklist(blacklist_type)
-                    return IIP
+            for whitelist_type in self.whitelists.keys():
+                if IIP.get(whitelist_type) in self.whitelists[whitelist_type]:
+                    logging.debug("Blacklisted {} for {} : {}".format(whitelist_type, ip, IIP.get(whitelist_type)))
+                    IIP.set_whitelist(whitelist_type)
             return IIP
         except Exception as e:
             logging.warning("Problem inspecting ip={} : {}".format(ip, e))
@@ -101,4 +113,3 @@ class Inspector():
     def get(self, ip):
         """For convienice switching between Inspector and MaxMind Client"""
         return self.inspect(ip)
-        

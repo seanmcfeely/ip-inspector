@@ -1,5 +1,6 @@
 import io
 import os
+import sys
 import shutil
 import tarfile
 import logging
@@ -11,15 +12,26 @@ from geoip2.errors import *
 from hashlib import md5
 from ip_inspector.config import CONFIG, HOME_PATH
 
+
 DOWNLOAD_URL = CONFIG['maxmind']['download_url']
 MD5_VERIFICATION_URL = CONFIG['maxmind']['md5_verification_url']
 DATA_DIR = os.path.join(HOME_PATH, CONFIG['default']['data_dir'])
 VAR_DIR = os.path.join(HOME_PATH, 'var')
 FIELDS  = CONFIG['maxmind']['field_map_keys']
 
-def upstream_maxmind_md5(database_name, license_key=CONFIG['maxmind']['license_key']):
+# Make sure the directories we need actually exist
+for path in [DATA_DIR, VAR_DIR]:
+    if not os.path.isdir(path):
+        try:
+            os.mkdir(path)
+        except Exception as e:
+            sys.stderr.write("ERROR: cannot create directory {0}: {1}\n".format(
+                path, str(e)))
+            sys.exit(1)
+
+def upstream_maxmind_md5(database_name, license_key=CONFIG['maxmind']['license_key'], **requests_kwargs):
     logging.debug("Getting current MaxMind MD5 for {}.tar.gz".format(database_name))
-    r = requests.get(MD5_VERIFICATION_URL.format(LICENSE_KEY=license_key, DATABASE_NAME=database_name))
+    r = requests.get(MD5_VERIFICATION_URL.format(LICENSE_KEY=license_key, DATABASE_NAME=database_name), **requests_kwargs)
     if r.status_code != 200:
         logging.error("Got {} response code from MaxMind server".format(r.status_code))
         return False
@@ -36,7 +48,12 @@ def get_local_md5_record(database_name):
         return var_md5
     return False
 
-def update_databases(license_key=CONFIG['maxmind']['license_key'], database_names=CONFIG['maxmind']['database_names'], force=False):
+def update_databases(license_key=CONFIG['maxmind']['license_key'],
+                     database_names=CONFIG['maxmind']['database_names'],
+                     force=False,
+                     **requests_kwargs):
+    """Update MaxMind GeoLite2 databases
+    """
 
     # TODO hash any local system databases and use those if they are up-to-date
     # -> have to figure out how to get the offical md5 hash of the mmdb file, rather than the tar.gz
@@ -46,6 +63,7 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'], database_name
         note = ("Missing MaxMind License Key. Sign up for a free key:  https://www.maxmind.com/en/geolite2/signup"
                 "\n\tThen save the key with `ip-inspector -lk value-of-key-here`")
         logging.error(note)
+        raise ValueError(note)
         return False
     if not database_names:
         logging.error("No databases specified to update.")
@@ -54,7 +72,7 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'], database_name
     # Get upstream hashes once
     upstream_database_hashes = {}
     for db in database_names:
-        upstream_database_hashes[db] = upstream_maxmind_md5(db, license_key)
+        upstream_database_hashes[db] = upstream_maxmind_md5(db, license_key, **requests_kwargs)
 
     # Check tar file md5 variables - update only if needed or it force is True
     if not force:
@@ -71,7 +89,7 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'], database_name
                     database_names.remove(db)
 
     for db in database_names:
-        r = requests.get(DOWNLOAD_URL.format(LICENSE_KEY=license_key, DATABASE_NAME=db, stream=True))
+        r = requests.get(DOWNLOAD_URL.format(LICENSE_KEY=license_key, DATABASE_NAME=db), stream=True, **requests_kwargs)
         if r.status_code == 401:
             logging.error("MaxMind Authentication failed.")
             return False
@@ -115,6 +133,25 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'], database_name
     return True
 
 
+def _validate_database_file_paths(database_files=CONFIG['maxmind']['local_database_files'],
+                                  system_database_files=CONFIG['maxmind']['system_default_database_files']):
+    """Given lists of local and system MaxMind GeoLite2 database file paths, return only existing files.
+       Local databases always override system databases.
+    """
+    # complete the file paths if they exist
+    valid_database_paths = {}
+    for db in database_files:
+        local_db = os.path.join(HOME_PATH, database_files[db].format(DATA_DIR=DATA_DIR))
+        if os.path.exists(local_db):
+            valid_database_paths[db] = local_db
+        elif os.path.exists(system_database_files[db]):
+            logging.warning("Local {} Database not found at '{}' -- using system db at {}".format(db, local_db, system_database_files[db]))
+            valid_database_paths[db] = system_database_files[db]
+        else:
+            logging.warning("Couldn't find local or system '{}' database".format(db))
+    return valid_database_paths
+
+
 class MaxMind_IP(object):
     """A convience wrapper around the MaxMind Results for an IP address.
     """
@@ -143,7 +180,7 @@ class MaxMind_IP(object):
                 try:
                     self.map[field] = self.city.subdivisions[0].names['en']
                 except IndexError:
-                    self.map[field] = 'N/A'
+                    self.map[field] = None
             elif field == 'City':
                 self.map[field] = self.city.city.name
             elif field == 'Time Zone':
@@ -185,44 +222,40 @@ class MaxMind_IP(object):
         return None
 
     def __str__(self):
-        #region_string = ' '.join([r['en'] for r in self.city.subdivisions])
         txt = "\t--------------------\n"
         for field in FIELDS:
-            txt += "\t{}: {}\n".format(field, self.get(field))
-        '''
-        txt += "\tIP: {}\n".format(self.ip)
-        txt += "\tASN: {}\n".format(self.asn.autonomous_system_number)
-        txt += "\tORG: {}\n".format(self.asn.autonomous_system_organization)
-        txt += "\tCountry: {}\n".format(self.country.country.name)
-        txt += "\tRegion: {}\n".format(self.get('Region'))
-        txt += "\tCity: {}\n".format(self.city.city.name)
-        txt += "\tTime Zone: {}\n".format(self.city.location.time_zone)
-        txt += "\tLatitude: {}\n".format(self.city.location.latitude)
-        txt += "\tLongitude: {}\n".format(self.city.location.longitude)
-        txt += "\tAccuracy Radius: {}\n".format(self.city.location.accuracy_radius)
-        '''
+            if self.get(field):
+                txt += "\t{}: {}\n".format(field, self.get(field))
+            else:
+                txt += "\t{}: {}\n".format(field, '')
         return(txt)
+
 
 class Client():
 
     def __init__(self,
                  database_files=CONFIG['maxmind']['local_database_files'],
-                 system_database_files=CONFIG['maxmind']['system_default_database_files']
+                 system_database_files=CONFIG['maxmind']['system_default_database_files'],
+                 license_key=CONFIG['maxmind']['license_key']
                  ):
-        # complete the file paths
-        for db in database_files:
-            local_db = os.path.join(HOME_PATH, database_files[db].format(DATA_DIR=DATA_DIR))
-            if os.path.exists(local_db):
-                database_files[db] = local_db
-            elif os.path.exists(system_database_files[db]):
-                logging.warning("Local {} Database not found at '{}' -- using system db at {}".format(db, local_db, system_database_files[db]))
-                database_files[db] = system_database_files[db]
+        # complete the file paths if they exist
+        self.database_files = _validate_database_file_paths(database_files=database_files,
+                                                            system_database_files=system_database_files)
+        if not self.database_files:
+            logging.warning("No MaxMind GeoLite2 Databases. Attempting to download.")
+            if not update_databases(license_key=license_key):
+                sys.exit(1)
             else:
-                logging.exception("Couldn't find local or system '{}' database".format(db))
+                self.database_files = _validate_database_file_paths(database_files=database_files,
+                                                            system_database_files=system_database_files)
 
-        self.asn_reader = geoip2.database.Reader(database_files['asn'])
-        self.city_reader = geoip2.database.Reader(database_files['city'])
-        self.country_reader = geoip2.database.Reader(database_files['country'])
+        self.asn_reader = self.city_reader = self.country_reader = None
+        if self.database_files['asn']:
+            self.asn_reader = geoip2.database.Reader(self.database_files['asn'])
+        if self.database_files['city']:
+            self.city_reader = geoip2.database.Reader(self.database_files['city'])
+        if self.database_files['country']:
+            self.country_reader = geoip2.database.Reader(self.database_files['country'])
 
     @property
     def asn(self):

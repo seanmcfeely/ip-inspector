@@ -17,13 +17,13 @@ default:
     # By country
     Country: 'etc/country_blacklist.txt'
     # By network or IP
-    Network: 'etc/network_blacklist.txt'
+    #Network: 'etc/network_blacklist.txt'
 
   # default whitelist locations
   whitelists:
-    org: 'etc/org_whitelist.txt'
-    asn: 'etc/asn_whitelist.txt'
-    network: 'etc/network_whitelist.txt'
+    ORG: 'etc/org_whitelist.txt'
+    ASN: 'etc/asn_whitelist.txt'
+    #network: 'etc/network_whitelist.txt'
 
 maxmind:
   account_number:

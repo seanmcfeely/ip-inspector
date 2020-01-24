@@ -1,0 +1,3 @@
+include ip_inspector/etc/default.config.yaml
+exclude ip_inspector/etc/*list.txt
+exclude ip_inspector/etc/local.config.overrides.json

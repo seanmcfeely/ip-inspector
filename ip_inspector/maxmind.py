@@ -145,7 +145,7 @@ def _validate_database_file_paths(database_files=CONFIG['maxmind']['local_databa
         if os.path.exists(local_db):
             valid_database_paths[db] = local_db
         elif os.path.exists(system_database_files[db]):
-            logging.warning("Local {} Database not found at '{}' -- using system db at {}".format(db, local_db, system_database_files[db]))
+            logging.debug("Local {} Database not found at '{}' -- using system db at {}".format(db, local_db, system_database_files[db]))
             valid_database_paths[db] = system_database_files[db]
         else:
             logging.warning("Couldn't find local or system '{}' database".format(db))
@@ -164,36 +164,41 @@ class MaxMind_IP(object):
         self._raw['city'] = self._city.raw
         self._raw['country'] = self._country.raw
         self._ip_address = self.asn.ip_address
-        self.map = {}
+        self.map = self.build_map()
+
+
+    def build_map(self):
+        field_map = {}
         for field in FIELDS:
             if field == 'IP':
-                self.map[field] = self.ip
+                field_map[field] = self.ip
             elif field == 'ASN':
-                self.map[field] = self._asn.autonomous_system_number
+                field_map[field] = self._asn.autonomous_system_number
             elif field == 'ORG':
-                self.map[field] = self.asn.autonomous_system_organization
+                field_map[field] = self.asn.autonomous_system_organization
             elif field == 'Continent':
-                self.map[field] = self.country.continent.name
+                field_map[field] = self.country.continent.name
             elif field == 'Country':
-                self.map[field] = self.country.country.name
+                field_map[field] = self.country.country.name
             elif field == 'Region':
                 try:
-                    self.map[field] = self.city.subdivisions[0].names['en']
+                    field_map[field] = self.city.subdivisions[0].names['en']
                 except IndexError:
-                    self.map[field] = None
+                    field_map[field] = None
             elif field == 'City':
-                self.map[field] = self.city.city.name
+                field_map[field] = self.city.city.name
             elif field == 'Time Zone':
-                self.map[field] = self.city.location.time_zone
+                field_map[field] = self.city.location.time_zone
             elif field == 'Latitude':
-                self.map[field] = self.city.location.latitude
+                field_map[field] = self.city.location.latitude
             elif field == 'Longitude':
-                self.map[field] = self.city.location.longitude
+                field_map[field] = self.city.location.longitude
             elif field == 'Accuracy Radius':
-                self.map[field] = self.city.location.accuracy_radius
+                field_map[field] = self.city.location.accuracy_radius
             else:
                 logging.error("Field not mapped to data: {}".format(field))
-                self.map[field] = None
+                field_map[field] = None
+        return field_map
 
     @property
     def asn(self):

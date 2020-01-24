@@ -1,1 +1,4 @@
+requests
 geoip2
+pyyaml
+argcomplete

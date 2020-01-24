@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
 
+import os
 import sys
 import json
 import argparse
@@ -9,7 +10,7 @@ import logging
 from pprint import pprint
 from ip_inspector.config import CONFIG, HOME_PATH, save, load
 from ip_inspector import maxmind
-from ip_inspector import Inspector
+from ip_inspector import Inspector, append_to_, remove_from_
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - [%(levelname)s] %(message)s')
@@ -27,26 +28,45 @@ def main():
     parser.add_argument('-csv', action='store_true', help="print fields as comma seperated with --from-stdin and fields")
     parser.add_argument('--from-stdin', action='store_true', help="Inspect each IP in a list of IP addresses passed to STDIN")
     parser.add_argument('-lk', '--license-key', action='store', help='MaxMind Liscense Key (saves to config for future use)')
-    parser.add_argument('-a', '--alert-toggle', action='store_true', default=CONFIG['default']['alert'],
-                        help="If True, Alert when a detection is made. Default configured state: {}".format(CONFIG['default']['alert']))
+    # Alerting not implemented
+    #parser.add_argument('-a', '--alert-toggle', action='store_true', default=CONFIG['default']['alert'],
+    #                    help="If True, Alert when a detection is made. Default configured state: {}".format(CONFIG['default']['alert']))
     parser.add_argument('-c', '--config-path', action='store', help='A YAML config to override the default config')
 
     subparsers = parser.add_subparsers(dest='command')
 
     wl_parser = subparsers.add_parser('whitelist', help="For interacting with the IP Network Organization whitelist")
     wl_parser.add_argument('-sp', '--show-path', action='store_true', help="Show the existing whitelist location.")
-    wl_parser.add_argument('-a', '--add', action='store', help="Add entries to the whitelist by IP results.")
-    wl_parser.add_argument('-r', '--remove', action='store', help="Remove entries to the whitelist by IP results.")
     wl_parser.add_argument('-p', '--print', action='store_true', help="Print the existing whitelist.")
+    wl_subparser = wl_parser.add_subparsers(dest='wl_command')
+    wl_add_parser = wl_subparser.add_parser('add', help="Append to a whitelist.")
+    wl_add_parser.add_argument('ip', help="The IP address to work with.")
+    wl_add_parser.add_argument('-t', '--whitelist-type', action='append', default=['ORG'], choices=CONFIG['default']['whitelists'].keys(),
+                                help="The type of metadata from this IP result that should be whitelisted. Can specify multiple times.")
+    wl_remove_parser = wl_subparser.add_parser('remove', help="Remove a whitelist entry.")
+    wl_remove_parser.add_argument('ip', help="The IP address to work with.")
+    wl_remove_parser.add_argument('-t', '--whitelist-type', action='append', default=['ORG'], choices=CONFIG['default']['whitelists'].keys(),
+                                help="The type of metadata from this IP result that should be removed from the respective whitelist. Can specify multiple times.")
+   
 
     bl_parser = subparsers.add_parser('blacklist', help="For interacting with the IP Network Organization blacklist.")
     bl_parser.add_argument('-sp', '--show-path', action='store_true', help="Show the existing blacklist location.")
-    bl_parser.add_argument('-a', '--add', action='store', help="Add entries to the blacklist by IP results.")
-    bl_parser.add_argument('-r', '--remove', action='store', help="Remove entries to the blacklist by IP results.")
     bl_parser.add_argument('-p', '--print', action='store_true', help="Print the existing blacklist.")
+    bl_subparser = bl_parser.add_subparsers(dest='bl_command')
+    bl_add_parser = bl_subparser.add_parser('add', help="Append to a blacklist.")
+    bl_add_parser.add_argument('ip', help="The IP address to work with.")
+    bl_add_parser.add_argument('-t', '--blacklist-type', action='append', default=['ORG'], choices=CONFIG['default']['blacklists'].keys(),
+                                help="The type of metadata from this IP result that should be blacklisted. Can specify multiple times.")
+    bl_remove_parser = bl_subparser.add_parser('remove', help="Remove a blacklist entry.")
+    bl_remove_parser.add_argument('ip', help="The IP address to work with.")
+    bl_remove_parser.add_argument('-t', '--blacklist-type', action='append', default=['ORG'], choices=CONFIG['default']['blacklists'].keys(),
+                                help="The type of metadata from this IP result that should be removed from the respective blacklist. Can specify multiple times.")
 
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
+
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     if args.config_path:
         config = load(args.config_path)
@@ -64,17 +84,48 @@ def main():
         if not maxmind.update_databases(license_key=config['maxmind']['license_key']):
             return 1
 
-    #mmc = maxmind.Client()
-    mmc = Inspector(maxmind.Client(license_key=config['maxmind']['license_key']))
+    mmi = Inspector(maxmind.Client(license_key=config['maxmind']['license_key']))
 
-    '''
-    if args.command == 'blacklist':
-        if args.add:
-            ip = args.add
+
+    if args.command == 'blacklist' or args.command == 'whitelist':
+        if args.show_path or args.print:
+            loaded_lists = config['default'][args.command+'s']
+            for _l, _path in loaded_lists.items():
+                if os.path.exists(_path):
+                    full_path = _path
+                else:
+                    full_path = os.path.join(HOME_PATH, _path)
+                if args.show_path:
+                    print("{}: {}".format(_l, full_path))
+                if args.print:
+                    if os.path.exists(full_path):
+                        with open(full_path, 'r') as fp:
+                            print(fp.read())
+            return
+        if args.ip:
+            ip = args.ip
             if '/' in ip:
                 ip = ip[:ip.rfind('/')]
-            mmip = mmc.get(ip)
-    '''
+            iip = mmi.inspect(ip)
+        if args.command == 'blacklist':
+            if args.bl_command == 'add':
+                for bl_type in list(set(args.blacklist_type)):
+                    blacklist_path = config['default']['blacklists'][bl_type]
+                    append_to_('blacklist', iip, field=bl_type, list_path=blacklist_path)
+            elif args.bl_command == 'remove':
+                for bl_type in list(set(args.blacklist_type)):
+                    blacklist_path = config['default']['blacklists'][bl_type]
+                    remove_from_('blacklist', iip, field=bl_type, list_path=blacklist_path)
+        if args.command == 'whitelist':
+            if args.wl_command == 'add':
+                for wl_type in list(set(args.whitelist_type)):
+                    whitelist_path = config['default']['whitelists'][wl_type]
+                    append_to_('whitelist', iip, field=wl_type, list_path=whitelist_path)
+            elif args.wl_command == 'remove':
+                for wl_type in list(set(args.whitelist_type)):
+                    whitelist_path = config['default']['whitelists'][wl_type]
+                    remove_from_('whitelist', iip, field=wl_type, list_path=whitelist_path)
+        return
 
     # TODO Validate IP addresses?
     if args.from_stdin:
@@ -88,41 +139,41 @@ def main():
                 network = ip
                 ip = ip[:ip.rfind('/')]
             try:
-                mmip = mmc.get(ip)
+                iip = mmi.inspect(ip)
             except ValueError:
                 logging.warning("{} is not a valid ipv4 or ipv6".format(ip))
-            if mmip:
+            if iip:
                 if args.raw_results:
-                    print(json.dumps(mmip.raw))
+                    print(json.dumps(iip.raw))
                 elif args.pretty_print:
-                    pprint(mmip.raw)
+                    pprint(iip.raw)
                 elif args.fields:
-                    result_string = "--> {}".format(network if network else mmip.ip)
+                    result_string = "--> {}".format(network if network else iip.ip)
                     if args.csv:
-                        result_string = "{},".format(network if network else mmip.ip)
+                        result_string = "{},".format(network if network else iip.ip)
                     for field in args.fields:
                         if args.csv:
-                            result_string += '"{}",'.format(mmip.get(field))
+                            result_string += '"{}",'.format(iip.get(field))
                         else:
-                            result_string += " | {}: {}".format(field, mmip.get(field))
+                            result_string += " | {}: {}".format(field, iip.get(field))
                     if result_string.endswith(','):
                         print(result_string[:-1])
                     else:
                         print(result_string)
                 else:
-                    print(mmip)
+                    print(iip)
         return
 
     if args.ip:
-        mmip = mmc.get(args.ip)
-        if mmip:
+        iip = mmi.inspect(args.ip)
+        if iip:
             if args.raw_results:
-                print(json.dumps(mmip.raw))
+                print(json.dumps(iip.raw))
             elif args.pretty_print:
-                pprint(mmip.raw)
+                pprint(iip.raw)
             elif args.fields:
                 for field in args.fields:
-                    print(mmip.get(field))
+                    print(iip.get(field))
             else:
-                print(mmip)
+                print(iip)
         return

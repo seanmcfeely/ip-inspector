@@ -1,4 +1,5 @@
 import os
+import shutil
 import logging
 
 from ip_inspector.config import CONFIG, HOME_PATH
@@ -113,3 +114,75 @@ class Inspector():
     def get(self, ip):
         """For convienice switching between Inspector and MaxMind Client"""
         return self.inspect(ip)
+
+
+def append_to_(list_type, iip: Inspected_IP, field='ORG', list_path=None):
+    """Append to a whitelist OR blacklist.
+    """
+
+    if field not in CONFIG['default'][list_type+'s'].keys():
+        logging.warning("{} type '{}' not defined in default config".format(list_type, field))
+
+    full_path = os.path.join(HOME_PATH, CONFIG['default'][list_type+'s'][field])
+    if list_path and os.path.exists(list_path):
+       full_path = list_path
+    if not os.path.exists(full_path):
+        logging.warning("Creating {} at {}.".format(list_type, full_path))
+
+    logging.debug("Using {} at '{}'".format(list_type, full_path))
+    try:
+        origional_map = iip.build_map()
+        value = origional_map[field]
+        if iip.is_blacklisted and list_type == 'blacklist':
+            logging.warning("'{}' already defined in blacklist.".format(value))
+            return None
+        elif iip.is_whitelisted and list_type == 'whitelist':
+            logging.warning("'{}' already defined in whitelist.".format(value))
+            return None
+        logging.info("Appending '{}'  to {} {}".format(value, field, list_type))
+        with open(full_path, 'a+') as l:
+            l.write(value+'\n')
+    except Exception as e:
+        logging.error("problem appending to {}: {}".format(list_type, e))
+        return False
+
+    return True
+
+def remove_from_(list_type, iip: Inspected_IP, field='ORG', list_path=None):
+    """remove from a whitelist OR blacklist.
+    """
+
+    if field not in CONFIG['default'][list_type+'s'].keys():
+        logging.warning("{} type '{}' not defined in default config".format(list_type, field))
+
+    full_path = os.path.join(HOME_PATH, CONFIG['default'][list_type+'s'][field])
+    if list_path and os.path.exists(list_path):
+       full_path = list_path
+    if not os.path.exists(full_path):
+        logging.error("No {} file exists at {}.".format(list_type, list_path))
+        return False
+
+    logging.debug("Using {} at '{}'".format(list_type, full_path))
+    try:
+        with open(full_path, 'r') as l:
+            current_list = l.readlines()
+    except Exception as e:
+        logging.error("Couldn't load current {} at {}".format(list_type, full_path))
+        return False
+    
+    try:
+        origional_map = iip.build_map()
+        value = origional_map[field]
+        if value+'\n' not in current_list:
+            logging.warning("{} already not in {} {}.".format(value, field, list_type))
+            return None
+        logging.info("Removing {} from {} {}".format(value, field, list_type))
+        current_list.remove(value+'\n')
+        with open(full_path, 'w') as fp:
+            for item in current_list:
+                fp.write(item)
+    except Exception as e:
+        logging.error("problem deleteing from {}: {}".format(list_type, e))
+        return False
+
+    return True

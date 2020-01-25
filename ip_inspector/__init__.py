@@ -20,10 +20,8 @@ class Inspected_IP(maxmind.MaxMind_IP):
         if blacklist_type and whitelist_type:
             logging.error("IP is both whitelisted and blacklisted!")
         if blacklist_type:
-            self.map[blacklist_type] = self._blacklist_str.format(self.get(blacklist_type))
             self._blacklisted = True
         if whitelist_type:
-            self.map[whitelist_type] = self._whitelist_str.format(self.get(whitelist_type))
             self._whitelisted = True
 
     def set_blacklist(self, blacklist_type):
@@ -50,6 +48,19 @@ class Inspected_IP(maxmind.MaxMind_IP):
             return self.map[self.blacklist_reason]
         if self.is_whitelisted:
             return self.map[self.whitelist_reason]
+
+    def __str__(self):
+        if self.is_blacklisted:
+            self.map[self.blacklist_reason] = self._blacklist_str.format(self.get(self.blacklist_reason))
+        if self.is_whitelisted:
+            self.map[self.whitelist_reason] = self._whitelist_str.format(self.get(self.whitelist_reason))
+        txt = "\t--------------------\n"
+        for field in self.build_map():
+            if self.get(field):
+                txt += "\t{}: {}\n".format(field, self.get(field))
+            else:
+                txt += "\t{}: {}\n".format(field, '')
+        return(txt)
 
 
 class Inspector():

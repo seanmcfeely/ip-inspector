@@ -231,14 +231,14 @@ class Client():
     def __init__(self,
                  database_files=CONFIG['maxmind']['local_database_files'],
                  system_database_files=CONFIG['maxmind']['system_default_database_files'],
-                 license_key=CONFIG['maxmind']['license_key']
-                 ):
+                 license_key=CONFIG['maxmind']['license_key'],
+                 **requests_kwargs):
         # complete the file paths if they exist
         self.database_files = _validate_database_file_paths(database_files=database_files,
                                                             system_database_files=system_database_files)
         if not self.database_files:
             logging.warning("No MaxMind GeoLite2 Databases. Attempting to download.")
-            if not update_databases(license_key=license_key):
+            if not update_databases(license_key=license_key, **requests_kwargs):
                 sys.exit(1)
             else:
                 self.database_files = _validate_database_file_paths(database_files=database_files,

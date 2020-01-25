@@ -1,6 +1,8 @@
 default:
-  # Directory where all databases and working files are stored
-  data_dir: 'data'
+  # Working current-user-home-directory/.ip_inspector (os.path.join(os.path.expanduser("~"))
+  work_dir: 'OVERRIDE'
+  # Where local databases and working files are stored
+  data_dir: '{WORK_DIR}/data'
 
   # If alert is true, generate an alert with any configured alert modules
   # when a detection is made

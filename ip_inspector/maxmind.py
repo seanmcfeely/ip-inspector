@@ -10,24 +10,12 @@ import geoip2.database
 from geoip2.errors import *
 
 from hashlib import md5
-from ip_inspector.config import CONFIG, HOME_PATH
-
+from ip_inspector.config import CONFIG, WORK_DIR, DATA_DIR, VAR_DIR
 
 DOWNLOAD_URL = CONFIG['maxmind']['download_url']
 MD5_VERIFICATION_URL = CONFIG['maxmind']['md5_verification_url']
-DATA_DIR = os.path.join(HOME_PATH, CONFIG['default']['data_dir'])
-VAR_DIR = os.path.join(HOME_PATH, 'var')
 FIELDS  = CONFIG['maxmind']['field_map_keys']
 
-# Make sure the directories we need actually exist
-for path in [DATA_DIR, VAR_DIR]:
-    if not os.path.isdir(path):
-        try:
-            os.mkdir(path)
-        except Exception as e:
-            sys.stderr.write("ERROR: cannot create directory {0}: {1}\n".format(
-                path, str(e)))
-            sys.exit(1)
 
 def upstream_maxmind_md5(database_name, license_key=CONFIG['maxmind']['license_key'], **requests_kwargs):
     logging.debug("Getting current MaxMind MD5 for {}.tar.gz".format(database_name))
@@ -64,7 +52,6 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'],
                 "\n\tThen save the key with `ip-inspector -lk value-of-key-here`")
         logging.error(note)
         raise ValueError(note)
-        return False
     if not database_names:
         logging.error("No databases specified to update.")
         return False
@@ -88,6 +75,8 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'],
                     # remove the db from the list so it does not get updated with the same content 
                     database_names.remove(db)
 
+    # system_default_database_files
+    #system_default_database_files = CONFIG['maxmind']['system_default_database_files']
     for db in database_names:
         r = requests.get(DOWNLOAD_URL.format(LICENSE_KEY=license_key, DATABASE_NAME=db), stream=True, **requests_kwargs)
         if r.status_code == 401:
@@ -97,6 +86,10 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'],
             logging.error("Got {} from MaxMind Server.".format(r.response_code))
             return False
         target_path = os.path.join(DATA_DIR, db+'.tar.gz')
+        #for _, fpath in system_default_database_files.items():
+        #    if db in fpath:
+        #        target_path = fpath
+        #        break
         with open(target_path, 'wb') as fp:
             for chunk in r.iter_content(io.DEFAULT_BUFFER_SIZE):
                 fp.write(chunk)
@@ -132,7 +125,6 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'],
 
     return True
 
-
 def _validate_database_file_paths(database_files=CONFIG['maxmind']['local_database_files'],
                                   system_database_files=CONFIG['maxmind']['system_default_database_files']):
     """Given lists of local and system MaxMind GeoLite2 database file paths, return only existing files.
@@ -141,7 +133,7 @@ def _validate_database_file_paths(database_files=CONFIG['maxmind']['local_databa
     # complete the file paths if they exist
     valid_database_paths = {}
     for db in database_files:
-        local_db = os.path.join(HOME_PATH, database_files[db].format(DATA_DIR=DATA_DIR))
+        local_db = os.path.join(WORK_DIR, database_files[db].format(DATA_DIR=DATA_DIR))
         if os.path.exists(local_db):
             valid_database_paths[db] = local_db
         elif os.path.exists(system_database_files[db]):
@@ -150,7 +142,6 @@ def _validate_database_file_paths(database_files=CONFIG['maxmind']['local_databa
         else:
             logging.warning("Couldn't find local or system '{}' database".format(db))
     return valid_database_paths
-
 
 class MaxMind_IP(object):
     """A convience wrapper around the MaxMind Results for an IP address.
@@ -234,7 +225,6 @@ class MaxMind_IP(object):
             else:
                 txt += "\t{}: {}\n".format(field, '')
         return(txt)
-
 
 class Client():
 

@@ -8,7 +8,7 @@ import argparse
 import argcomplete
 import logging
 from pprint import pprint
-from ip_inspector.config import CONFIG, HOME_PATH, save, load
+from ip_inspector.config import CONFIG, WORK_DIR, save, load
 from ip_inspector import maxmind
 from ip_inspector import Inspector, append_to_, remove_from_
 
@@ -31,7 +31,11 @@ def main():
     # Alerting not implemented
     #parser.add_argument('-a', '--alert-toggle', action='store_true', default=CONFIG['default']['alert'],
     #                    help="If True, Alert when a detection is made. Default configured state: {}".format(CONFIG['default']['alert']))
-    parser.add_argument('-c', '--config-path', action='store', help='A YAML config to override the default config')
+    parser.add_argument('-c', '--config-path', action='store',
+        help='A JSON config to override the default configuration. The path is saved for future use.')
+    help_note = ("Write a copy of the existing configuration to the local config path for easily making configuration overrides"
+                 "changes, or updates. Edit the local config to meet your needs.")
+    parser.add_argument('--customize', action='store_true', help=help_note)
 
     subparsers = parser.add_subparsers(dest='command')
 
@@ -69,13 +73,27 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if args.config_path:
-        config = load(args.config_path)
+        if not os.path.exists(args.config_path):
+            print("That file doesn't exist.")
+            return
+        # TODO weird bug.. if there is a saved config the logging configuration is wiped.
+        logging.warning("KNOWN BUG: if there is a saved config the logging configuration is wiped.")
+        save({'default': { 'saved_config_path': args.config_path}})
+        config = load()
     else:
         config = CONFIG
+
+    if args.customize:
+        # save will write the existing loaded configuration to the SAVED_CONFIG_PATH
+        if save(config):
+            print("Wrote the existing configuration to: {}".format(SAVED_CONFIG_PATH))
+            print("Make any changes to that local configuration file and the changes will persist.")
+        return
 
     if args.license_key:
         data = {}
         data['maxmind'] = {'license_key': args.license_key}
+        #data['default'] = {'work_dir': config['default']['work_dir']}
         save(data)
         # put it in the right place so this session can continue
         config['maxmind']['license_key'] = args.license_key
@@ -94,7 +112,7 @@ def main():
                 if os.path.exists(_path):
                     full_path = _path
                 else:
-                    full_path = os.path.join(HOME_PATH, _path)
+                    full_path = os.path.join(WORK_DIR, _path)
                 if args.show_path:
                     print("{}: {}".format(_l, full_path))
                 if args.print:

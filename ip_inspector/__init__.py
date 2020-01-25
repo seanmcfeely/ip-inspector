@@ -2,7 +2,7 @@ import os
 import shutil
 import logging
 
-from ip_inspector.config import CONFIG, HOME_PATH
+from ip_inspector.config import CONFIG, WORK_DIR
 from ip_inspector import maxmind
 
 
@@ -73,7 +73,7 @@ class Inspector():
         for bl_type, bl_path in blacklists.items():
             full_path = bl_path
             if not os.path.exists(full_path):
-                full_path = os.path.join(HOME_PATH, full_path)
+                full_path = os.path.join(WORK_DIR, full_path)
                 if not os.path.exists(full_path):
                     logging.debug("No {} blacklist found at {} or {}".format(bl_type, bl_path, full_path))
                     continue
@@ -82,7 +82,7 @@ class Inspector():
         for wl_type, wl_path in whitelists.items():
             full_path = wl_path
             if not os.path.exists(full_path):
-                full_path = os.path.join(HOME_PATH, full_path)
+                full_path = os.path.join(WORK_DIR, full_path)
                 if not os.path.exists(full_path):
                     logging.debug("No {} whitelist found at {} or {}".format(wl_type, wl_path, full_path))
                     continue
@@ -123,7 +123,7 @@ def append_to_(list_type, iip: Inspected_IP, field='ORG', list_path=None):
     if field not in CONFIG['default'][list_type+'s'].keys():
         logging.warning("{} type '{}' not defined in default config".format(list_type, field))
 
-    full_path = os.path.join(HOME_PATH, CONFIG['default'][list_type+'s'][field])
+    full_path = os.path.join(WORK_DIR, CONFIG['default'][list_type+'s'][field])
     if list_path and os.path.exists(list_path):
        full_path = list_path
     if not os.path.exists(full_path):
@@ -155,7 +155,7 @@ def remove_from_(list_type, iip: Inspected_IP, field='ORG', list_path=None):
     if field not in CONFIG['default'][list_type+'s'].keys():
         logging.warning("{} type '{}' not defined in default config".format(list_type, field))
 
-    full_path = os.path.join(HOME_PATH, CONFIG['default'][list_type+'s'][field])
+    full_path = os.path.join(WORK_DIR, CONFIG['default'][list_type+'s'][field])
     if list_path and os.path.exists(list_path):
        full_path = list_path
     if not os.path.exists(full_path):

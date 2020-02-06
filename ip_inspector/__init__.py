@@ -125,7 +125,7 @@ class Inspector():
         return self.inspect(ip)
 
 
-def append_to_(list_type, iip: Inspected_IP, field='ORG', list_path=None):
+def append_to_(list_type, iip: Inspected_IP, field='ORG', list_path=None, force=False):
     """Append to a whitelist OR blacklist.
     """
 
@@ -148,6 +148,14 @@ def append_to_(list_type, iip: Inspected_IP, field='ORG', list_path=None):
         elif iip.is_whitelisted and list_type == 'whitelist':
             logging.warning("'{}' already defined in whitelist.".format(value))
             return None
+        # By default, do not blacklist things that are whitelisted and vice versa
+        if not force:
+            if iip.is_whitelisted and list_type == 'blacklist':
+                logging.warning("'{}' is whitelisted. Not adding to blacklist.".format(value))
+                return False
+            if iip.is_blacklisted and list_type == 'whitelist':
+                logging.warning("'{}' is blacklisted. Not adding to whitelist.".format(value))
+                return False
         logging.info("Appending '{}'  to {} {}".format(value, field, list_type))
         with open(full_path, 'a+') as l:
             l.write(value+'\n')

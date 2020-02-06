@@ -25,12 +25,10 @@ class Inspected_IP(maxmind.MaxMind_IP):
             self._whitelisted = True
 
     def set_blacklist(self, blacklist_type):
-        self.map[blacklist_type] = self._blacklist_str.format(self.get(blacklist_type))
         self.blacklist_reason = blacklist_type
         self._blacklisted = True
 
     def set_whitelist(self, whitelist_type):
-        self.map[whitelist_type] = self._whitelist_str.format(self.get(whitelist_type))
         self.whitelist_reason = whitelist_type
         self._whitelisted = True
 

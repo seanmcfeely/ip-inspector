@@ -33,7 +33,7 @@ def main():
     #                    help="If True, Alert when a detection is made. Default configured state: {}".format(CONFIG['default']['alert']))
     parser.add_argument('-c', '--config-path', action='store',
         help='A JSON config to override the default configuration. The path is saved for future use.')
-    help_note = ("Write a copy of the existing configuration to the local config path for easily making configuration overrides"
+    help_note = ("Write a copy of the existing configuration to the local config path for easily making configuration overrides, "
                  "changes, or updates. Edit the local config to meet your needs.")
     parser.add_argument('--customize', action='store_true', help=help_note)
 
@@ -85,9 +85,9 @@ def main():
 
     if args.customize:
         # save will write the existing loaded configuration to the SAVED_CONFIG_PATH
-        if save(config):
-            print("Wrote the existing configuration to: {}".format(SAVED_CONFIG_PATH))
-            print("Make any changes to that local configuration file and the changes will persist.")
+        if save(config, config_path='ip_inspector.config.json'):
+            print("Wrote the existing configuration to: ip_inspector.config.json")
+            print("Make any changes to that configuration file and then supply it to `ip-inspector --config-path`")
         return
 
     if args.license_key:

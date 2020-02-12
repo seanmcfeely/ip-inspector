@@ -9,7 +9,7 @@ import argcomplete
 import logging
 from pprint import pprint
 from ip_inspector.config import CONFIG, WORK_DIR, save, load
-from ip_inspector import maxmind
+from ip_inspector import maxmind, tor
 from ip_inspector import Inspector, append_to_, remove_from_
 
 logging.basicConfig(level=logging.INFO,
@@ -24,6 +24,7 @@ def main():
     parser.add_argument('-r', '--raw-results', action='store_true', help="return results in their raw json format")
     parser.add_argument('-pp', '--pretty-print', action='store_true', help="Pretty print the raw json results")
     parser.add_argument('-i', '--ip', action='store', help="A single IP address to inspect.")
+    parser.add_argument('--print-tor-exits', action='store_true', help="Get tor exist nodes")
     parser.add_argument('-f', '--field',  action='append', dest='fields', default=[], choices=maxmind.FIELDS, help='specific fields to return')
     parser.add_argument('-csv', action='store_true', help="print fields as comma seperated with --from-stdin and fields")
     parser.add_argument('--from-stdin', action='store_true', help="Inspect each IP in a list of IP addresses passed to STDIN")
@@ -71,6 +72,10 @@ def main():
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    if args.print_tor_exits:
+        for EN in tor.ExitNodes().exit_nodes:
+            print(EN)
 
     if args.config_path:
         if not os.path.exists(args.config_path):

@@ -3,13 +3,13 @@ import shutil
 import logging
 
 from ip_inspector.config import CONFIG, WORK_DIR
-from ip_inspector import maxmind
+from ip_inspector import maxmind, tor
 
 
 class Inspected_IP(maxmind.MaxMind_IP):
     """A MaxMind_IP result with whitelist/blacklist metadata added."""
 
-    def __init__(self, asn_result, city_result, country_result, blacklist_type=None, whitelist_type=None):
+    def __init__(self, asn_result, city_result, country_result, blacklist_type=None, whitelist_type=None, tor_exit_node=False):
         super().__init__(asn_result, city_result, country_result)
         self._blacklist_str = '{} (!BLACKLISTED!)'
         self._whitelist_str = '{} (whitelisted)'
@@ -23,6 +23,10 @@ class Inspected_IP(maxmind.MaxMind_IP):
             self._blacklisted = True
         if whitelist_type:
             self._whitelisted = True
+        self.is_tor = tor_exit_node
+        # expand the map
+        if self.is_tor:
+            self.map['TOR'] = self.is_tor
 
     def set_blacklist(self, blacklist_type):
         self.blacklist_reason = blacklist_type
@@ -53,8 +57,10 @@ class Inspected_IP(maxmind.MaxMind_IP):
         if self.is_whitelisted:
             self.map[self.whitelist_reason] = self._whitelist_str.format(self.get(self.whitelist_reason))
         txt = "\t--------------------\n"
-        for field in self.build_map():
-            if self.get(field):
+        for field in self.map:
+            if field == 'IP' and self.is_tor:
+                txt += "\t{}: {}\n".format(field, "{} (TOR EXIT)".format(self.get(field)))
+            elif self.get(field):
                 txt += "\t{}: {}\n".format(field, self.get(field))
             else:
                 txt += "\t{}: {}\n".format(field, '')
@@ -71,14 +77,16 @@ class Inspector():
     """
 
     def __init__(self,
-                 mmc: maxmind.Client,
+                 mmc: maxmind.Client = maxmind.Client(),
                  blacklists=CONFIG['default']['blacklists'],
-                 whitelists=CONFIG['default']['whitelists']
+                 whitelists=CONFIG['default']['whitelists'],
+                 tor_exits: tor.ExitNodes = tor.ExitNodes()
                  ):
        
         self.mmc = mmc
         self.blacklists = {}
         self.whitelists = {}
+        self.tor_exits = tor_exits
         for bl_type, bl_path in blacklists.items():
             full_path = bl_path
             if not os.path.exists(full_path):
@@ -106,14 +114,14 @@ class Inspector():
         :return: 
         """
         try:
-            IIP = Inspected_IP(self.mmc.asn(ip), self.mmc.city(ip), self.mmc.country(ip))
+            IIP = Inspected_IP(self.mmc.asn(ip), self.mmc.city(ip), self.mmc.country(ip), tor_exit_node=self.tor_exits.is_exit_node(ip))
             for blacklist_type in self.blacklists.keys():
                 if IIP.get(blacklist_type) in self.blacklists[blacklist_type]:
                     logging.debug("Blacklisted {} for {} : {}".format(blacklist_type, ip, IIP.get(blacklist_type)))
                     IIP.set_blacklist(blacklist_type)
             for whitelist_type in self.whitelists.keys():
                 if IIP.get(whitelist_type) in self.whitelists[whitelist_type]:
-                    logging.debug("Blacklisted {} for {} : {}".format(whitelist_type, ip, IIP.get(whitelist_type)))
+                    logging.debug("Whitelisted {} for {} : {}".format(whitelist_type, ip, IIP.get(whitelist_type)))
                     IIP.set_whitelist(whitelist_type)
             return IIP
         except Exception as e:

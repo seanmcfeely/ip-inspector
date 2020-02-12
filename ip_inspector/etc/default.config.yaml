@@ -27,6 +27,18 @@ default:
     ASN: 'etc/asn_whitelist.txt'
     #network: 'etc/network_whitelist.txt'
 
+# TOR Exit Nodes
+tor:
+  # The following returns a list of all Tor exit nodes from the past 16 hours that can contact {IP} on port 80
+  exit_node_url: 'https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip={IP}'
+  # the default {IP} to generate the exit node list for
+  default_ip: '1.1.1.1'
+  # where to store a cache of results (meant to be refreshed every-so-often)
+  cache_path: '{DATA_DIR}/tor_exit_nodes.txt'
+  # How long, in hours, to wait before updating the cache. Note, the tor project seems to update
+  # every hour, although they seem to have a little time drift
+  max_cache_age: 1
+
 maxmind:
   account_number:
   # You will need to register with MaxMind for a free license key: https://www.maxmind.com/en/geolite2/signup

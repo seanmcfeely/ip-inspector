@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 description = "A tool for proving intel on IP addresses and enabling detection and response."
 
 here = path.abspath(path.dirname(__file__))

@@ -48,6 +48,16 @@ def _load_saved(saved_config_path=SAVED_CONFIG_PATH):
             logging.warning("Problem loading saved configuration file: {}".format(e))
     return saved
 
+def _load_this_(config_path):
+    config = None
+    try:
+        with open(config_path) as c:
+           config = yaml.load(c, Loader=Loader)
+    except:
+        logging.exception("Problem loading config: {}".format(config_path))
+        return False
+    return config
+
 def load(config_path=None, saved_config_path=SAVED_CONFIG_PATH):
     """Load configuration files. The default YAML config is always loaded first. Next, any saved overrides or non-default
        configuration items are loaded from any local json file at saved_config_path. Finally, any valid config_path passed will be loaded last.
@@ -56,15 +66,6 @@ def load(config_path=None, saved_config_path=SAVED_CONFIG_PATH):
     :param config_paths (str): Path to a yaml configuration file to override defaults.
     :param saved_config_path (str): Path to a saved json configuration at a location different than the default.
     """
-    def _load_this_(config_path):
-        config = None
-        try:
-            with open(config_path) as c:
-               config = yaml.load(c, Loader=Loader)
-        except:
-            logging.exception("Problem loading config: {}".format(config_path))
-            return False
-        return config
 
     # load the default config
     config = _load_this_(DEFAULT_CONFIG_PATH)

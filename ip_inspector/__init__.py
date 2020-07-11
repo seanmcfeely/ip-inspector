@@ -71,13 +71,13 @@ class Inspector():
     """An a computer network inspector for the primary purpose of
        Intel & Detection. Wrapper around maxmind.Client.
 
-    :intel_agents: API objects to query for resources.
+    :mmc: MaxMind Clietn API object to query for resources.
     :blacklists: Detection files.
     :whitelists: good guys.
     """
 
     def __init__(self,
-                 mmc: maxmind.Client = maxmind.Client(),
+                 mmc: maxmind.Client = maxmind.Client() or None,
                  blacklists=CONFIG['default']['blacklists'],
                  whitelists=CONFIG['default']['whitelists'],
                  tor_exits: tor.ExitNodes = tor.ExitNodes()

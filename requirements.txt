@@ -2,3 +2,4 @@ requests
 geoip2
 pyyaml
 argcomplete
+coloredlogs

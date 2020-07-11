@@ -7,14 +7,12 @@ import json
 import argparse
 import argcomplete
 import logging
+import coloredlogs
+
 from pprint import pprint
 from ip_inspector.config import CONFIG, WORK_DIR, save, load
 from ip_inspector import maxmind, tor
 from ip_inspector import Inspector, append_to_, remove_from_
-
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - [%(levelname)s] %(message)s')
-
 
 def main():
 
@@ -70,8 +68,15 @@ def main():
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
+    # configure logging
+    logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - [%(levelname)s] %(message)s')
+
+    logger = logging.getLogger()
+    coloredlogs.install(level='INFO', logger=logger)
+
     if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+        coloredlogs.install(level='DEBUG', logger=logger)
 
     if args.print_tor_exits:
         for EN in tor.ExitNodes().exit_nodes:

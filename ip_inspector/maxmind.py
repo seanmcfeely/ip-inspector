@@ -237,20 +237,21 @@ class Client():
         self.database_files = _validate_database_file_paths(database_files=database_files,
                                                             system_database_files=system_database_files)
         if not self.database_files:
-            logging.warning("No MaxMind GeoLite2 Databases. Attempting to download.")
+            logging.info("No MaxMind GeoLite2 Databases. Attempting to download.")
             if not update_databases(license_key=license_key, **requests_kwargs):
-                sys.exit(1)
+                logging.warning("Failed to download MaxMind GeoLite2 Database files.")
             else:
                 self.database_files = _validate_database_file_paths(database_files=database_files,
                                                             system_database_files=system_database_files)
 
         self.asn_reader = self.city_reader = self.country_reader = None
-        if self.database_files['asn']:
-            self.asn_reader = geoip2.database.Reader(self.database_files['asn'])
-        if self.database_files['city']:
-            self.city_reader = geoip2.database.Reader(self.database_files['city'])
-        if self.database_files['country']:
-            self.country_reader = geoip2.database.Reader(self.database_files['country'])
+        if self.database_files:
+            if self.database_files['asn']:
+                self.asn_reader = geoip2.database.Reader(self.database_files['asn'])
+            if self.database_files['city']:
+                self.city_reader = geoip2.database.Reader(self.database_files['city'])
+            if self.database_files['country']:
+                self.country_reader = geoip2.database.Reader(self.database_files['country'])
 
     @property
     def asn(self):

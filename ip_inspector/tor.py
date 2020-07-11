@@ -24,10 +24,10 @@ class ExitNodes():
         self.max_cache_age = max_cache_age
         self._default_ip = default_ip
         self.requests_kwargs = requests_kwargs
-        if not os.path.exists(cache_path):
-            logging.info("Creating Tor exit node cache for the first time.")
-            self.cache_exit_nodes()
-        self.update_cache_if_old()
+        #if not os.path.exists(cache_path):
+        #    logging.info("Creating Tor exit node cache for the first time.")
+        #    self.cache_exit_nodes()
+        #self.update_cache_if_old()
 
     def cache_exit_nodes(self):
         """Download a copy of the current TOR exit nodes and store at cache_path."""

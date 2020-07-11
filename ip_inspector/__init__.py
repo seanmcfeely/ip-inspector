@@ -80,7 +80,7 @@ class Inspector():
                  mmc: maxmind.Client = maxmind.Client() or None,
                  blacklists=CONFIG['default']['blacklists'],
                  whitelists=CONFIG['default']['whitelists'],
-                 tor_exits: tor.ExitNodes = tor.ExitNodes()
+                 tor_exits: tor.ExitNodes = tor.ExitNodes() or None
                  ):
        
         self.mmc = mmc

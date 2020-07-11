@@ -236,13 +236,6 @@ class Client():
         # complete the file paths if they exist
         self.database_files = _validate_database_file_paths(database_files=database_files,
                                                             system_database_files=system_database_files)
-        if not self.database_files:
-            logging.info("No MaxMind GeoLite2 Databases. Attempting to download.")
-            if not update_databases(license_key=license_key, **requests_kwargs):
-                logging.warning("Failed to download MaxMind GeoLite2 Database files.")
-            else:
-                self.database_files = _validate_database_file_paths(database_files=database_files,
-                                                            system_database_files=system_database_files)
 
         self.asn_reader = self.city_reader = self.country_reader = None
         if self.database_files:

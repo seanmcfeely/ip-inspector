@@ -1,0 +1,92 @@
+default:
+  # Working current-user-home-directory/.ip_inspector (os.path.join(os.path.expanduser("~"))
+  work_dir: 'OVERRIDE'
+  # Where local databases and working files are stored
+  data_dir: '{WORK_DIR}/data'
+
+  # Case matters for blacklists and whitelists keys. Keys should match a key in field_map_keys if it's in the field map.
+  # default blacklist locations
+  blacklists:
+    # By Organization name
+    - ORG
+    # By ASN
+    - ASN
+    # By country
+    - Country
+
+  # default whitelist locations
+  whitelists:
+    - ORG
+    - ASN
+
+  # should this stay in the config? perhaps migration code?
+  legacy_blacklists:
+    # By Organization name
+    ORG: 'etc/org_blacklist.txt'
+    # By ASN
+    ASN: 'etc/asn_blacklist.txt'
+    # By country
+    Country: 'etc/country_blacklist.txt'
+
+  legacy_whitelists:
+    ORG: 'etc/org_whitelist.txt'
+    ASN: 'etc/asn_whitelist.txt'
+
+
+# TOR Exit Nodes
+tor:
+  # The following returns a list of all Tor exit nodes from the past 16 hours that can contact {IP} on port 80
+  exit_node_url: 'https://check.torproject.org/cgi-bin/TorBulkExitList.py?ip={IP}'
+  # the default {IP} to generate the exit node list for
+  default_ip: '1.1.1.1'
+  # where to store a cache of results (meant to be refreshed every-so-often)
+  cache_path: '{DATA_DIR}/tor_exit_nodes.txt'
+  # How long, in hours, to wait before updating the cache. Note, the tor project seems to update
+  # every hour, although they seem to have a little time drift
+  max_cache_age: 1
+
+maxmind:
+  account_number:
+  # You will need to register with MaxMind for a free license key: https://www.maxmind.com/en/geolite2/signup
+  license_key:
+  # use system proxy settings
+  use_proxy: true
+  # use os cert store to verify ssl
+  verify_ssl: true
+
+  database_names:
+    # List of the databases MaxMind provides for free
+    - 'GeoLite2-ASN'
+    - 'GeoLite2-City'
+    - 'GeoLite2-Country'
+
+  download_url: 'https://download.maxmind.com/app/geoip_download?edition_id={DATABASE_NAME}&license_key={LICENSE_KEY}&suffix=tar.gz'
+  md5_verification_url: 'https://download.maxmind.com/app/geoip_download?edition_id={DATABASE_NAME}&license_key={LICENSE_KEY}&suffix=tar.gz.md5'
+
+  local_database_files:
+    # Default location for storing database files
+    # local and relative to where the code lives
+    asn: '{DATA_DIR}/GeoLite2-ASN.mmdb'
+    city: '{DATA_DIR}/GeoLite2-City.mmdb'
+    country: '{DATA_DIR}/GeoLite2-Country.mmdb'
+
+  system_default_database_files:
+    # These are default locations for GeoLite2 Country, City, and ASN databases 
+    asn: '/usr/share/GeoIP/GeoLite2-ASN.mmdb'
+    city: '/usr/share/GeoIP/GeoLite2-City.mmdb'
+    country: '/usr/share/GeoIP/GeoLite2-Country.mmdb'
+
+  field_map_keys:
+    # The default fields: i.e., the more valuable fields commonly desired to see
+    # these names get mapped to their sometimes nested values in the data
+    - 'IP'
+    - 'ASN'
+    - 'ORG'
+    - 'Continent'
+    - 'Country'
+    - 'Region'
+    - 'City'
+    - 'Time Zone'
+    - 'Latitude'
+    - 'Longitude'
+    - 'Accuracy Radius'

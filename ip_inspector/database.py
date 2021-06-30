@@ -53,6 +53,7 @@ class BlacklistEntry(Base):
     def to_dict(self):
         """Return the BlacklistEntry as a dictionary."""
         return {'id': self.id,
+                'entry_type': 'blacklist',
                 'infrastructure_context_id': self.infrastructure_id,
                 'org': self.org,
                 'asn': self.asn,
@@ -94,6 +95,7 @@ class WhitelistEntry(Base):
     def to_dict(self):
         """Return the WhitelistEntry as a dictionary."""
         return {'id': self.id,
+                'entry_type': 'whitelist',
                 'infrastructure_context_id': self.infrastructure_id,
                 'org': self.org,
                 'asn': self.asn,

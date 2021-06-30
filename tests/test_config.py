@@ -23,7 +23,7 @@ def test_configuration_defaults():
     assert not config['maxmind']['license_key']
     assert config['default']['work_dir'] == "OVERRIDE"
 
-def test_save_configuration_overrides(no_local_config_overrides):
+def test_save_configuration_overrides():
     from ip_inspector.config import load_configuration, save_configuration, _load_saved_json
 
     assert not os.path.exists(SAVED_CONFIG_PATH)
@@ -52,6 +52,8 @@ def test_load_configuration():
     from ip_inspector.config import load_configuration, save_configuration, CONFIG, WORK_DIR
 
     config = load_configuration()
+    assert not config['maxmind']['license_key']
+    assert not CONFIG['maxmind']['license_key']
     # without a saved configuration, load_configuration is OVERRIDE
     assert config['default']['work_dir'] == "OVERRIDE"
     # save the work dir

@@ -199,7 +199,7 @@ def append_to_(list_type: Union["blacklist", "whitelist"], iip: Inspected_IP, fi
     # Don't allow whitelisting and blacklisting under the same context
     # Just in case this Inspected_IP is not up-to-date, we spend the cycles to refresh() it.
     iip.refresh()
-    if context_id != iip._infrastructure_context:
+    if context_id != iip._infrastructure_context:  
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
     if list_type == "blacklist" and iip.is_whitelisted:

@@ -15,7 +15,7 @@ def test_inspector_contruction():
     assert isinstance(ipi.mmc, maxmind.Client)
     assert isinstance(ipi.tor_exits, tor.ExitNodes)
 
-def test_inspector_function():
+def test_inspector_function(test_database):
     from ip_inspector import Inspector, Inspected_IP
     ipi = Inspector(maxmind_license_key=get_real_license_key())
 

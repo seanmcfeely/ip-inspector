@@ -87,6 +87,26 @@ def test_get_blacklists(test_database):
     assert isinstance(results, list)
     assert isinstance(results[0], BlacklistEntry)
 
+def test_blacklist_to_dict(test_database):
+    from ip_inspector.database import BlacklistEntry
+    with get_session() as session:
+        entry = session.query(BlacklistEntry).get(1)
+        result = entry.to_dict()
+        assert isinstance(result, dict)
+        keys = ['id', 'entry_type', 'infrastructure_context_id', 'org', 'asn', 'country', 'insert_date', 'reference']
+        assert keys == list(result.keys())
+        assert result['reference'] == "SpaceJam Network"
+
+def test_whitelist_to_dict(test_database):
+    from ip_inspector.database import WhitelistEntry
+    with get_session() as session:
+        entry = session.query(WhitelistEntry).get(1)
+        result = entry.to_dict()
+        assert isinstance(result, dict)
+        keys = ['id', 'entry_type', 'infrastructure_context_id', 'org', 'asn', 'country', 'insert_date', 'reference']
+        assert keys == list(result.keys())
+        assert result['reference'] == "Cartoon Network"
+
 def test_get_whitelist(test_database):
     from ip_inspector.database import get_whitelists, WhitelistEntry
     results = get_whitelists(get_session())

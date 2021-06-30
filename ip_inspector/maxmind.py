@@ -82,8 +82,8 @@ def update_databases(license_key=CONFIG['maxmind']['license_key'],
     if not license_key:
         note = ("Missing MaxMind License Key. Sign up for a free key:  https://www.maxmind.com/en/geolite2/signup"
                 "\n\tThen save the key with `ip-inspector -lk value-of-key-here`")
-        LOGGER.error(note)
-        raise ValueError(note)
+        LOGGER.critical(note)
+        return False
     if not database_names:
         LOGGER.error("No databases specified to update.")
         return False

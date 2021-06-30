@@ -4,39 +4,47 @@ import pytest
 
 from tests import *
 
+
 def test_version():
     from ip_inspector import __version__
-    assert __version__ == '0.1.0'
+
+    assert __version__ == "0.1.0"
+
 
 def test_inspector_contruction():
     from ip_inspector import Inspector, maxmind, tor
+
     ipi = Inspector(maxmind_license_key=get_real_license_key())
     assert isinstance(ipi, Inspector)
     assert isinstance(ipi.mmc, maxmind.Client)
     assert isinstance(ipi.tor_exits, tor.ExitNodes)
 
+
 def test_inspector_function(test_database):
     from ip_inspector import Inspector, Inspected_IP
+
     ipi = Inspector(maxmind_license_key=get_real_license_key())
 
-    inspected_ip = ipi.inspect('8.8.8.8')
+    inspected_ip = ipi.inspect("8.8.8.8")
     assert isinstance(inspected_ip, Inspected_IP)
-    assert isinstance(ipi.get('8.8.8.8'), Inspected_IP)
-    
+    assert isinstance(ipi.get("8.8.8.8"), Inspected_IP)
+
     # context does not exist but the inspector shouldn't care
-    inspected_ip = ipi.inspect('8.8.8.8', infrastructure_context=20)
+    inspected_ip = ipi.inspect("8.8.8.8", infrastructure_context=20)
     assert isinstance(inspected_ip, Inspected_IP)
-    inspected_ip = ipi.inspect('8.8.8.8', infrastructure_context="faketest")
+    inspected_ip = ipi.inspect("8.8.8.8", infrastructure_context="faketest")
     assert isinstance(inspected_ip, Inspected_IP)
     # context does not exist but the inspector shouldn't care
-    inspected_ip = ipi.get('8.8.8.8', infrastructure_context=20)
+    inspected_ip = ipi.get("8.8.8.8", infrastructure_context=20)
     assert isinstance(inspected_ip, Inspected_IP)
-    inspected_ip = ipi.get('8.8.8.8', infrastructure_context="faketest")
-    assert isinstance(inspected_ip, Inspected_IP)    
+    inspected_ip = ipi.get("8.8.8.8", infrastructure_context="faketest")
+    assert isinstance(inspected_ip, Inspected_IP)
+
 
 def test_inspected_ip(test_database):
     from ip_inspector import Inspector, Inspected_IP
-    ip = '8.8.8.8'
+
+    ip = "8.8.8.8"
     inspector = Inspector(maxmind_license_key=get_real_license_key())
     # manually construct by access inspectors maxmind readers
     iip = Inspected_IP(inspector.mmc.asn(ip), inspector.mmc.city(ip), inspector.mmc.country(ip))
@@ -50,6 +58,7 @@ def test_inspected_ip(test_database):
     assert iip.ip == ip
 
     from ip_inspector.database import check_whitelist, check_blacklist, get_session
+
     blacklist_results = check_blacklist(get_session(), org=iip.get("ORG"))
     # do not whitelist with anything other than a WhitelistEntry
     with pytest.raises(AssertionError):
@@ -68,7 +77,7 @@ def test_inspected_ip(test_database):
     assert f"ORG: {iip.get('ORG')} {iip._blacklist_str}" in str(iip)
     iip.remove_blacklist()
     assert iip.is_blacklisted == False
-    
+
     whitelist_results = check_whitelist(get_session(), context=700, org=iip.get("ORG"))
     with pytest.raises(AssertionError):
         iip.set_blacklist(whitelist_results)
@@ -84,8 +93,10 @@ def test_inspected_ip(test_database):
     assert iip.refresh() == True
     assert iip.is_blacklisted == True
 
+
 def test_append_to_(fresh_database):
     from ip_inspector import append_to_, BlacklistEntry, WhitelistEntry
+
     iip = get_inspected_ip()
     with pytest.raises(ValueError):
         append_to_("blah", iip, fields=["ORG"])
@@ -115,9 +126,11 @@ def test_append_to_(fresh_database):
     assert iip._infrastructure_context == 1
     assert append_to_("blacklist", iip, fields=["ORG"], context_id=5) == False
 
+
 def test_remove_from_(test_database):
     from ip_inspector import remove_from_
     from ip_inspector.database import BlacklistEntry, WhitelistEntry, get_whitelists, get_blacklists, get_session
+
     iip = get_inspected_ip()
     with pytest.raises(ValueError):
         remove_from_("blah", iip, fields=["ORG"])
@@ -134,4 +147,3 @@ def test_remove_from_(test_database):
     iip._infrastructure_context = 700
     assert remove_from_("whitelist", iip, fields=["ORG"], context_id=700, reference=iip.ip) == True
     assert len(get_whitelists(get_session())) == 3
-

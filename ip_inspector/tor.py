@@ -8,27 +8,29 @@ import requests
 from ip_inspector.config import load_configuration, WORK_DIR, DATA_DIR, VAR_DIR
 
 CONFIG = load_configuration()
-DOWNLOAD_URL = CONFIG['tor']['exit_node_url']
-CACHE_PATH = os.path.join(WORK_DIR, CONFIG['tor']['cache_path'].format(DATA_DIR=DATA_DIR))
-MAX_CACHE_AGE = CONFIG['tor']['max_cache_age']
+DOWNLOAD_URL = CONFIG["tor"]["exit_node_url"]
+CACHE_PATH = os.path.join(WORK_DIR, CONFIG["tor"]["cache_path"].format(DATA_DIR=DATA_DIR))
+MAX_CACHE_AGE = CONFIG["tor"]["max_cache_age"]
 
 
-class ExitNodes():
+class ExitNodes:
     """Manage access and updates to Tor exit nodes."""
 
-    def __init__(self,
-                 default_ip=CONFIG['tor']['default_ip'],
-                 cache_path=CACHE_PATH,
-                 max_cache_age=MAX_CACHE_AGE,
-                 **requests_kwargs):
+    def __init__(
+        self,
+        default_ip=CONFIG["tor"]["default_ip"],
+        cache_path=CACHE_PATH,
+        max_cache_age=MAX_CACHE_AGE,
+        **requests_kwargs
+    ):
         self.cache_path = cache_path
         self.max_cache_age = max_cache_age
         self._default_ip = default_ip
         self.requests_kwargs = requests_kwargs
-        #if not os.path.exists(cache_path):
+        # if not os.path.exists(cache_path):
         #    logging.info("Creating Tor exit node cache for the first time.")
         #    self.cache_exit_nodes()
-        #self.update_cache_if_old()
+        # self.update_cache_if_old()
 
     def cache_exit_nodes(self):
         """Download a copy of the current TOR exit nodes and store at cache_path."""
@@ -38,7 +40,7 @@ class ExitNodes():
             return False
         if os.path.exists(self.cache_path):
             os.remove(self.cache_path)
-        with open(self.cache_path, 'wb') as fp:
+        with open(self.cache_path, "wb") as fp:
             for chunk in r.iter_content(io.DEFAULT_BUFFER_SIZE):
                 fp.write(chunk)
         if os.path.exists(self.cache_path):
@@ -66,13 +68,15 @@ class ExitNodes():
         """Return the current list of Tor exit nodes as a list."""
         try:
             self.update_cache_if_old()
-            with open(self.cache_path, 'rb') as fp:
-                exit_nodes = [line.decode('utf-8').strip() for line in fp.readlines() if not line.lstrip().startswith(b'#')]
+            with open(self.cache_path, "rb") as fp:
+                exit_nodes = [
+                    line.decode("utf-8").strip() for line in fp.readlines() if not line.lstrip().startswith(b"#")
+                ]
             return exit_nodes
         except Exception as e:
             logging.warning("Problem occured reading exit nodes: {}".format(e))
             return False
-    
+
     def load_exit_nodes_from_torproject(self):
         """Download the exit nodes directly from torproject and load them into a list."""
         try:
@@ -80,7 +84,7 @@ class ExitNodes():
             if r.status_code != 200:
                 logging.error("Got {} from torproject.org".format(r.status_code))
                 return False
-            return [line.strip() for line in r.text.splitlines() if not line.startswith('#')]
+            return [line.strip() for line in r.text.splitlines() if not line.startswith("#")]
         except Exception as e:
             logging.warning("Problem getting exit nodes from torproject: {}".format(e))
             return False
@@ -101,4 +105,3 @@ class ExitNodes():
         if ip in self.exit_nodes:
             return True
         return False
-

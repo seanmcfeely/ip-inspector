@@ -6,13 +6,26 @@ from typing import Union, List
 
 from ip_inspector.config import CONFIG, WORK_DIR
 from ip_inspector import maxmind, tor
-from ip_inspector.database import get_session, get_infrastructure_context_map, append_to_blacklist, append_to_whitelist, remove_from_blacklist, remove_from_whitelist, check_blacklist, check_whitelist, DEFAULT_INFRASTRUCTURE_CONTEXT_ID, BlacklistEntry, WhitelistEntry
+from ip_inspector.database import (
+    get_session,
+    get_infrastructure_context_map,
+    append_to_blacklist,
+    append_to_whitelist,
+    remove_from_blacklist,
+    remove_from_whitelist,
+    check_blacklist,
+    check_whitelist,
+    DEFAULT_INFRASTRUCTURE_CONTEXT_ID,
+    BlacklistEntry,
+    WhitelistEntry,
+)
 
 LOGGER = logging.getLogger("ip-inspector.inspector")
 
+
 class Inspected_IP(maxmind.MaxMind_IP):
     """IP address enriched with MaxMind and any InfrastructureContext tracking.
-    
+
     Attributes:
         asn_result: Result of MaxMind ASN DB Reader query.
         city_result: Result of MaxMind City DB Reader query.
@@ -20,10 +33,17 @@ class Inspected_IP(maxmind.MaxMind_IP):
         tor_exit_node: True if a known tor exit node. eh.
     """
 
-    def __init__(self, asn_result, city_result, country_result, tor_exit_node=False, _infrastructure_context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
+    def __init__(
+        self,
+        asn_result,
+        city_result,
+        country_result,
+        tor_exit_node=False,
+        _infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID,
+    ):
         super().__init__(asn_result, city_result, country_result)
-        self._blacklist_str = '(!BLACKLISTED!)'
-        self._whitelist_str = '(whitelisted)'
+        self._blacklist_str = "(!BLACKLISTED!)"
+        self._whitelist_str = "(whitelisted)"
         self._blacklisted = False
         self._blacklist_reasons = []
         self._blacklisted_fields = []
@@ -33,7 +53,7 @@ class Inspected_IP(maxmind.MaxMind_IP):
         self.is_tor = tor_exit_node
         # expand the map
         if self.is_tor:
-            self.map['TOR'] = self.is_tor
+            self.map["TOR"] = self.is_tor
         self._infrastructure_context = _infrastructure_context
 
     def set_blacklist(self, blacklist_results):
@@ -51,7 +71,7 @@ class Inspected_IP(maxmind.MaxMind_IP):
             self._blacklist_reasons.append(bl_entry.to_dict())
         return True
 
-    def set_whitelist(self, whitelist_results): # XXX db model update it
+    def set_whitelist(self, whitelist_results):  # XXX db model update it
         if self.is_blacklisted:
             LOGGER.error(f"can not whitelist: {self.ip} has blacklist hits on these fields: {self.blacklisted_fields}")
             return False
@@ -77,11 +97,23 @@ class Inspected_IP(maxmind.MaxMind_IP):
 
     def refresh(self):
         with get_session() as session:
-            blacklist_results = check_blacklist(session, context=self._infrastructure_context, org=self.get('ORG'), asn=self.get('ASN'), country=self.get('Country'))
+            blacklist_results = check_blacklist(
+                session,
+                context=self._infrastructure_context,
+                org=self.get("ORG"),
+                asn=self.get("ASN"),
+                country=self.get("Country"),
+            )
             if blacklist_results:
                 self.set_blacklist(blacklist_results)
                 return True
-            whitelist_results = check_whitelist(session, context=self._infrastructure_context, org=self.get('ORG'), asn=self.get('ASN'), country=self.get('Country'))
+            whitelist_results = check_whitelist(
+                session,
+                context=self._infrastructure_context,
+                org=self.get("ORG"),
+                asn=self.get("ASN"),
+                country=self.get("Country"),
+            )
             if whitelist_results:
                 self.set_whitelist(whitelist_results)
         return True
@@ -107,7 +139,7 @@ class Inspected_IP(maxmind.MaxMind_IP):
     def __str__(self):
         txt = "\t--------------------\n"
         for field in self.map:
-            if field == 'IP' and self.is_tor:
+            if field == "IP" and self.is_tor:
                 txt += f"\t{field}: {self.get(field)} (TOR EXIT)\n"
             elif self.get(field):
                 if field in self.blacklisted_fields:
@@ -118,13 +150,13 @@ class Inspected_IP(maxmind.MaxMind_IP):
                     txt += f"\t{field}: {self.get(field)}\n"
             else:
                 txt += f"\t{field}: \n"
-        return(txt)
+        return txt
 
 
-class Inspector():
+class Inspector:
     """Internet Protocol metadata InfrastructureContext inspector.
-    
-       A wrapper around the maxmind client that uses the MaxMind GeoLite2 databases to 
+
+       A wrapper around the maxmind client that uses the MaxMind GeoLite2 databases to
        get metadata on given IPv4/IPv6 observables and then checks popular metadata field values
        against a database that tracks blacklists and whitelist values.
 
@@ -134,12 +166,12 @@ class Inspector():
     """
 
     # change to accept maxmind license key instead?
-    #def __init__(self, mmc: maxmind.Client=maxmind.Client(),tor_exits: Union[tor.ExitNodes, None]=tor.ExitNodes() or None):
-    def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None]=tor.ExitNodes() or None):
+    # def __init__(self, mmc: maxmind.Client=maxmind.Client(),tor_exits: Union[tor.ExitNodes, None]=tor.ExitNodes() or None):
+    def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None] = tor.ExitNodes() or None):
         self.mmc = maxmind.Client(license_key=maxmind_license_key)
         self.tor_exits = tor_exits
 
-    def inspect(self, ip, infrastructure_context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
+    def inspect(self, ip, infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         """Get IP metadata and enrich with InfrastructureContext Blacklist/Whitelist hits.
 
         Args:
@@ -150,13 +182,31 @@ class Inspector():
             An Inspected_IP object.
         """
         try:
-            IIP = Inspected_IP(self.mmc.asn(ip), self.mmc.city(ip), self.mmc.country(ip), tor_exit_node=self.tor_exits.is_exit_node(ip), _infrastructure_context=infrastructure_context)
+            IIP = Inspected_IP(
+                self.mmc.asn(ip),
+                self.mmc.city(ip),
+                self.mmc.country(ip),
+                tor_exit_node=self.tor_exits.is_exit_node(ip),
+                _infrastructure_context=infrastructure_context,
+            )
             with get_session() as session:
-                blacklist_results = check_blacklist(session, context=infrastructure_context, org=IIP.get('ORG'), asn=IIP.get('ASN'), country=IIP.get('Country'))
+                blacklist_results = check_blacklist(
+                    session,
+                    context=infrastructure_context,
+                    org=IIP.get("ORG"),
+                    asn=IIP.get("ASN"),
+                    country=IIP.get("Country"),
+                )
                 if blacklist_results:
                     IIP.set_blacklist(blacklist_results)
                 # both should not happen
-                whitelist_results = check_whitelist(session, context=infrastructure_context, org=IIP.get('ORG'), asn=IIP.get('ASN'), country=IIP.get('Country'))
+                whitelist_results = check_whitelist(
+                    session,
+                    context=infrastructure_context,
+                    org=IIP.get("ORG"),
+                    asn=IIP.get("ASN"),
+                    country=IIP.get("Country"),
+                )
                 if whitelist_results:
                     IIP.set_whitelist(whitelist_results)
 
@@ -166,7 +216,7 @@ class Inspector():
             LOGGER.warning(f"Problem inspecting ip={ip} : {e}")
             return None
 
-    def get(self, ip, infrastructure_context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
+    def get(self, ip, infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         """Get IP metadata and enrich with InfrastructureContext Blacklist/Whitelist hits.
 
         For convienice switching between Inspector and MaxMind Client
@@ -181,7 +231,13 @@ class Inspector():
         return self.inspect(ip, infrastructure_context=infrastructure_context)
 
 
-def append_to_(list_type: Union["blacklist", "whitelist"], iip: Inspected_IP, fields: List, context_id: int=1, reference: str=None):
+def append_to_(
+    list_type: Union["blacklist", "whitelist"],
+    iip: Inspected_IP,
+    fields: List,
+    context_id: int = 1,
+    reference: str = None,
+):
     """Append a new ip whitelist OR blacklist entry.
 
     Args:
@@ -199,7 +255,7 @@ def append_to_(list_type: Union["blacklist", "whitelist"], iip: Inspected_IP, fi
     # Don't allow whitelisting and blacklisting under the same context
     # Just in case this Inspected_IP is not up-to-date, we spend the cycles to refresh() it.
     iip.refresh()
-    if context_id != iip._infrastructure_context:  
+    if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
     if list_type == "blacklist" and iip.is_whitelisted:
@@ -236,17 +292,28 @@ def append_to_(list_type: Union["blacklist", "whitelist"], iip: Inspected_IP, fi
         reference = iip.ip
     with get_session() as session:
         if list_type == "blacklist":
-            entry = append_to_blacklist(session, context=context_id, org=org, asn=asn, country=country, reference=reference)
+            entry = append_to_blacklist(
+                session, context=context_id, org=org, asn=asn, country=country, reference=reference
+            )
             if entry:
                 iip.refresh()
             return entry
         elif list_type == "whitelist":
-            entry = append_to_whitelist(session, context=context_id, org=org, asn=asn, country=country, reference=reference)
+            entry = append_to_whitelist(
+                session, context=context_id, org=org, asn=asn, country=country, reference=reference
+            )
             if entry:
                 iip.refresh()
             return entry
 
-def remove_from_(list_type: Union["blacklist", "whitelist"], iip: Inspected_IP, fields: List, context_id: int=1, reference: str=None):
+
+def remove_from_(
+    list_type: Union["blacklist", "whitelist"],
+    iip: Inspected_IP,
+    fields: List,
+    context_id: int = 1,
+    reference: str = None,
+):
     """Remove ip context from a whitelist OR blacklist.
 
     Args:
@@ -277,12 +344,16 @@ def remove_from_(list_type: Union["blacklist", "whitelist"], iip: Inspected_IP, 
 
     with get_session() as session:
         if list_type == "blacklist":
-            result = remove_from_blacklist(session, context=context_id, org=org, asn=asn, country=country, reference=reference)
+            result = remove_from_blacklist(
+                session, context=context_id, org=org, asn=asn, country=country, reference=reference
+            )
             if result:
                 iip.refresh()
             return result
         elif list_type == "whitelist":
-            result = remove_from_whitelist(session, context=context_id, org=org, asn=asn, country=country, reference=reference)
+            result = remove_from_whitelist(
+                session, context=context_id, org=org, asn=asn, country=country, reference=reference
+            )
             if result:
                 iip.refresh()
             return result

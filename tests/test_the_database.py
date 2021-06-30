@@ -6,8 +6,10 @@ from tests import *
 
 from ip_inspector.database import get_session
 
+
 def test_create_infrastructure_context(fresh_database):
     from ip_inspector.database import create_infrastructure_context, InfrastructureContext
+
     icontext = create_infrastructure_context(get_session(), "test_context")
     assert isinstance(icontext, InfrastructureContext)
     assert icontext.name == "test_context"
@@ -16,8 +18,10 @@ def test_create_infrastructure_context(fresh_database):
     result = create_infrastructure_context(get_session(), "test_context")
     assert result is None
 
+
 def test_delete_infrastructure_context(test_database):
     from ip_inspector.database import delete_infrastructure_context
+
     # ensure we refuse to delete the "default" context ID #1
     assert delete_infrastructure_context(get_session(), 1) == None
     # does not exist, should be False
@@ -25,32 +29,51 @@ def test_delete_infrastructure_context(test_database):
     # True
     assert delete_infrastructure_context(get_session(), 2) == True
 
+
 def test_get_infrastructure_context_map(test_database):
     from ip_inspector.database import get_infrastructure_context_map
+
     context_map = get_infrastructure_context_map(get_session())
     assert isinstance(context_map, dict)
     assert context_map["test_default_context"] == 1
 
+
 def test_get_all_infrastructure_context(test_database):
     from ip_inspector.database import get_all_infrastructure_context
+
     assert isinstance(get_all_infrastructure_context(get_session()), list)
+
 
 def test_get_infrastructure_context_by_name(test_database):
     from ip_inspector.database import get_infrastructure_context_by_name, InfrastructureContext
+
     result = get_infrastructure_context_by_name(get_session(), "test_another_context")
     assert isinstance(result, InfrastructureContext)
 
+
 def test_get_infrastructure_context_by_id(test_database):
     from ip_inspector.database import get_infrastructure_context_by_id, InfrastructureContext
+
     result = get_infrastructure_context_by_id(get_session(), 2)
     assert isinstance(result, InfrastructureContext)
 
+
 def test_append_to_blacklist(fresh_database):
     from ip_inspector.database import append_to_blacklist, BlacklistEntry
+
     iip = get_inspected_ip()
-    bl_entry = append_to_blacklist(get_session(), context=1, org=iip.get("ORG"), asn=iip.get("ASN"), country=iip.get("Country"), reference="for testing")
+    bl_entry = append_to_blacklist(
+        get_session(),
+        context=1,
+        org=iip.get("ORG"),
+        asn=iip.get("ASN"),
+        country=iip.get("Country"),
+        reference="for testing",
+    )
     assert isinstance(bl_entry, BlacklistEntry)
-    entry = append_to_blacklist(get_session(), context=1, org="float stack", asn=54, country="Canada", reference="Cartoon Network")
+    entry = append_to_blacklist(
+        get_session(), context=1, org="float stack", asn=54, country="Canada", reference="Cartoon Network"
+    )
     assert entry.id == 2
     assert entry.infrastructure_id == 1
     assert entry.org == "float stack"
@@ -63,12 +86,23 @@ def test_append_to_blacklist(fresh_database):
     # so the entry is created even if the InfrastructureContext does not exist.
     assert isinstance(append_to_blacklist(get_session(), context=700, org="ha!"), BlacklistEntry)
 
+
 def test_append_to_whitelist(fresh_database):
     from ip_inspector.database import append_to_whitelist, WhitelistEntry
+
     iip = get_inspected_ip()
-    bl_entry = append_to_whitelist(get_session(), context=1, org=iip.get("ORG"), asn=iip.get("ASN"), country=iip.get("Country"), reference="for testing")
+    bl_entry = append_to_whitelist(
+        get_session(),
+        context=1,
+        org=iip.get("ORG"),
+        asn=iip.get("ASN"),
+        country=iip.get("Country"),
+        reference="for testing",
+    )
     assert isinstance(bl_entry, WhitelistEntry)
-    entry = append_to_whitelist(get_session(), context=1, org="float stack", asn=54, country="Canada", reference="Cartoon Network")
+    entry = append_to_whitelist(
+        get_session(), context=1, org="float stack", asn=54, country="Canada", reference="Cartoon Network"
+    )
     assert entry.id == 2
     assert entry.infrastructure_id == 1
     assert entry.org == "float stack"
@@ -81,40 +115,50 @@ def test_append_to_whitelist(fresh_database):
     # so the entry is created even if the InfrastructureContext does not exist.
     assert isinstance(append_to_whitelist(get_session(), context=700, org="ha!"), WhitelistEntry)
 
+
 def test_get_blacklists(test_database):
     from ip_inspector.database import get_blacklists, BlacklistEntry
+
     results = get_blacklists(get_session())
     assert isinstance(results, list)
     assert isinstance(results[0], BlacklistEntry)
 
+
 def test_blacklist_to_dict(test_database):
     from ip_inspector.database import BlacklistEntry
+
     with get_session() as session:
         entry = session.query(BlacklistEntry).get(1)
         result = entry.to_dict()
         assert isinstance(result, dict)
-        keys = ['id', 'entry_type', 'infrastructure_context_id', 'org', 'asn', 'country', 'insert_date', 'reference']
+        keys = ["id", "entry_type", "infrastructure_context_id", "org", "asn", "country", "insert_date", "reference"]
         assert keys == list(result.keys())
-        assert result['reference'] == "SpaceJam Network"
+        assert result["reference"] == "SpaceJam Network"
+
 
 def test_whitelist_to_dict(test_database):
     from ip_inspector.database import WhitelistEntry
+
     with get_session() as session:
         entry = session.query(WhitelistEntry).get(1)
         result = entry.to_dict()
         assert isinstance(result, dict)
-        keys = ['id', 'entry_type', 'infrastructure_context_id', 'org', 'asn', 'country', 'insert_date', 'reference']
+        keys = ["id", "entry_type", "infrastructure_context_id", "org", "asn", "country", "insert_date", "reference"]
         assert keys == list(result.keys())
-        assert result['reference'] == "Cartoon Network"
+        assert result["reference"] == "Cartoon Network"
+
 
 def test_get_whitelist(test_database):
     from ip_inspector.database import get_whitelists, WhitelistEntry
+
     results = get_whitelists(get_session())
     assert isinstance(results, list)
     assert isinstance(results[0], WhitelistEntry)
 
+
 def test_remove_from_blacklist(test_database):
     from ip_inspector.database import remove_from_blacklist, get_blacklists
+
     assert len(get_blacklists(get_session())) == 5
     # should be False
     assert remove_from_blacklist(get_session(), context="fake") == False
@@ -136,8 +180,10 @@ def test_remove_from_blacklist(test_database):
     assert remove_from_blacklist(get_session(), context=1, country="United States") == True
     assert len(get_blacklists(get_session())) == 0
 
+
 def test_remove_from_whitelist(test_database):
     from ip_inspector.database import remove_from_whitelist, get_whitelists
+
     assert len(get_whitelists(get_session())) == 5
     # should be False
     assert remove_from_whitelist(get_session(), context="fake") == False
@@ -159,8 +205,10 @@ def test_remove_from_whitelist(test_database):
     assert remove_from_whitelist(get_session(), context=1, country="Canada") == True
     assert len(get_whitelists(get_session())) == 0
 
+
 def test_check_blacklist(test_database):
     from ip_inspector.database import check_blacklist, BlacklistEntry
+
     # nothing begets nothing
     result = check_blacklist(get_session())
     assert result is False
@@ -177,8 +225,10 @@ def test_check_blacklist(test_database):
     # nothing still begets nothing
     assert check_blacklist(get_session(), context=1) is False
 
+
 def test_check_whitelist(test_database):
     from ip_inspector.database import check_whitelist, WhitelistEntry
+
     # nothing begets nothing
     result = check_whitelist(get_session())
     assert result is False

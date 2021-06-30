@@ -14,9 +14,19 @@ from ip_inspector.config import CONFIG, WORK_DIR, save_configuration, load_confi
 from ip_inspector import maxmind, tor
 from ip_inspector import Inspector, append_to_, remove_from_
 
-from ip_inspector.database import get_session, get_infrastructure_context_map, create_infrastructure_context, delete_infrastructure_context, get_all_infrastructure_context, DEFAULT_INFRASTRUCTURE_CONTEXT_NAME, get_blacklists, get_whitelists
+from ip_inspector.database import (
+    get_session,
+    get_infrastructure_context_map,
+    create_infrastructure_context,
+    delete_infrastructure_context,
+    get_all_infrastructure_context,
+    DEFAULT_INFRASTRUCTURE_CONTEXT_NAME,
+    get_blacklists,
+    get_whitelists,
+)
 
 LOGGER = logging.getLogger("ip-inspector.cli")
+
 
 def main(args=None):
     """The main CLI entry point."""
@@ -25,78 +35,154 @@ def main(args=None):
         args = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
-    parser.add_argument('-d', '--debug', default=False, action='store_true', help="Turn on debug logging.")
-    parser.add_argument('-u', '--update-databases', default=False, action='store_true', help="Update the MaxMind GeoLite2 Databases")
-    parser.add_argument('-r', '--json', dest='raw_results', action='store_true', help="return results in their raw json format")
-    parser.add_argument('-pp', '--pretty-print', action='store_true', help="Pretty print the raw json results")
-    parser.add_argument('-i', '--ip', action='store', help="A single IP address to inspect.")
-    parser.add_argument('--print-tor-exits', action='store_true', help="Get tor exist nodes")
-    parser.add_argument('-f', '--field',  action='append', dest='fields', default=[], choices=maxmind.FIELDS, help='specific fields to return')
-    parser.add_argument('-csv', action='store_true', help="print fields as comma seperated with --from-stdin and fields")
-    parser.add_argument('--from-stdin', action='store_true', help="Inspect each IP in a list of IP addresses passed to STDIN")
-    parser.add_argument('-lk', '--license-key', action='store', help='Set MaxMind Liscense Key (saves to config for future use)')
-    parser.add_argument('--update-config', action='store',
-        help='Path to a JSON config containing updates that should be applied to update or override the existing configuration.')
-    help_note = ("Write a copy of the existing configuration to the local config path for easily making configuration overrides, "
-                 "changes, or updates. Edit the local config to meet your needs.")
-    parser.add_argument('--customize', action='store_true', help=help_note)
-    parser.add_argument('--print-tracking-contexts', action='store_true', help="Show existing infrastructure tracking contexts.")
-    parser.add_argument('--create-tracking-context', action='store', help="Create a new infrastructure tracking context.")
-    parser.add_argument('--delete-tracking-context', action='store', type=int, help="Delete the infrastructure tracking context by ID.")
+    parser.add_argument("-d", "--debug", default=False, action="store_true", help="Turn on debug logging.")
+    parser.add_argument(
+        "-u", "--update-databases", default=False, action="store_true", help="Update the MaxMind GeoLite2 Databases"
+    )
+    parser.add_argument(
+        "-r", "--json", dest="raw_results", action="store_true", help="return results in their raw json format"
+    )
+    parser.add_argument("-pp", "--pretty-print", action="store_true", help="Pretty print the raw json results")
+    parser.add_argument("-i", "--ip", action="store", help="A single IP address to inspect.")
+    parser.add_argument("--print-tor-exits", action="store_true", help="Get tor exist nodes")
+    parser.add_argument(
+        "-f",
+        "--field",
+        action="append",
+        dest="fields",
+        default=[],
+        choices=maxmind.FIELDS,
+        help="specific fields to return",
+    )
+    parser.add_argument(
+        "-csv", action="store_true", help="print fields as comma seperated with --from-stdin and fields"
+    )
+    parser.add_argument(
+        "--from-stdin", action="store_true", help="Inspect each IP in a list of IP addresses passed to STDIN"
+    )
+    parser.add_argument(
+        "-lk", "--license-key", action="store", help="Set MaxMind Liscense Key (saves to config for future use)"
+    )
+    parser.add_argument(
+        "--update-config",
+        action="store",
+        help="Path to a JSON config containing updates that should be applied to update or override the existing configuration.",
+    )
+    help_note = (
+        "Write a copy of the existing configuration to the local config path for easily making configuration overrides, "
+        "changes, or updates. Edit the local config to meet your needs."
+    )
+    parser.add_argument("--customize", action="store_true", help=help_note)
+    parser.add_argument(
+        "--print-tracking-contexts", action="store_true", help="Show existing infrastructure tracking contexts."
+    )
+    parser.add_argument(
+        "--create-tracking-context", action="store", help="Create a new infrastructure tracking context."
+    )
+    parser.add_argument(
+        "--delete-tracking-context", action="store", type=int, help="Delete the infrastructure tracking context by ID."
+    )
 
-    default_context_name = CONFIG['default'].get('tracking_context', DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
+    default_context_name = CONFIG["default"].get("tracking_context", DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
     infrastructure_context_map = {}
     with get_session() as session:
         infrastructure_context_map = get_infrastructure_context_map(session)
     context_choices = list(infrastructure_context_map.keys())
     default_context_id = infrastructure_context_map.get(default_context_name, 1)
-    parser.add_argument('-c', '--context', action='store', default=default_context_name, choices=context_choices, help=f"The infrastructure context to work under. default={default_context_name}")
-    parser.add_argument('--set-default-context', action='store', choices=context_choices, help="Set the default infrastructure tracking context to work under.")
+    parser.add_argument(
+        "-c",
+        "--context",
+        action="store",
+        default=default_context_name,
+        choices=context_choices,
+        help=f"The infrastructure context to work under. default={default_context_name}",
+    )
+    parser.add_argument(
+        "--set-default-context",
+        action="store",
+        choices=context_choices,
+        help="Set the default infrastructure tracking context to work under.",
+    )
 
-    subparsers = parser.add_subparsers(dest='command')
+    subparsers = parser.add_subparsers(dest="command")
 
-    wl_parser = subparsers.add_parser('whitelist', help="For interacting with the IP Network Organization whitelist")
-    wl_parser.add_argument('-p', '--print', action='store_true', help="Print the existing whitelist.")
+    wl_parser = subparsers.add_parser("whitelist", help="For interacting with the IP Network Organization whitelist")
+    wl_parser.add_argument("-p", "--print", action="store_true", help="Print the existing whitelist.")
 
-    wl_subparser = wl_parser.add_subparsers(dest='wl_command')
-    wl_add_parser = wl_subparser.add_parser('add', help="Append to a whitelist.")
-    wl_add_parser.add_argument('ip', help="The IP address to work with.")
-    wl_add_parser.add_argument('-t', '--whitelist-type', action='append', default=['ORG'], choices=CONFIG['default']['whitelists'],
-                                help="The type of metadata from this IP result that should be whitelisted. Can specify multiple times.")
-    wl_add_parser.add_argument('-r', '--reference', action='store', default=None, help="A custom reference for the entry.")
+    wl_subparser = wl_parser.add_subparsers(dest="wl_command")
+    wl_add_parser = wl_subparser.add_parser("add", help="Append to a whitelist.")
+    wl_add_parser.add_argument("ip", help="The IP address to work with.")
+    wl_add_parser.add_argument(
+        "-t",
+        "--whitelist-type",
+        action="append",
+        default=["ORG"],
+        choices=CONFIG["default"]["whitelists"],
+        help="The type of metadata from this IP result that should be whitelisted. Can specify multiple times.",
+    )
+    wl_add_parser.add_argument(
+        "-r", "--reference", action="store", default=None, help="A custom reference for the entry."
+    )
 
-    wl_remove_parser = wl_subparser.add_parser('remove', help="Remove a whitelist entry.")
-    wl_remove_parser.add_argument('ip', help="The IP address to work with.")
-    wl_remove_parser.add_argument('-t', '--whitelist-type', action='append', default=['ORG'], choices=CONFIG['default']['whitelists'],
-                                help="The type of metadata from this IP result that should be removed from the respective whitelist. Can specify multiple times.")
-    wl_remove_parser.add_argument('-r', '--reference', action='store', default=None, help="Remove all entries where the IP is found as a reference.")
-   
-    bl_parser = subparsers.add_parser('blacklist', help="For interacting with the IP Network Organization blacklist.")
-    bl_parser.add_argument('-p', '--print', action='store_true', help="Print the existing blacklist.")
+    wl_remove_parser = wl_subparser.add_parser("remove", help="Remove a whitelist entry.")
+    wl_remove_parser.add_argument("ip", help="The IP address to work with.")
+    wl_remove_parser.add_argument(
+        "-t",
+        "--whitelist-type",
+        action="append",
+        default=["ORG"],
+        choices=CONFIG["default"]["whitelists"],
+        help="The type of metadata from this IP result that should be removed from the respective whitelist. Can specify multiple times.",
+    )
+    wl_remove_parser.add_argument(
+        "-r",
+        "--reference",
+        action="store",
+        default=None,
+        help="Remove all entries where the IP is found as a reference.",
+    )
 
-    bl_subparser = bl_parser.add_subparsers(dest='bl_command')
-    bl_add_parser = bl_subparser.add_parser('add', help="Append to a blacklist.")
-    bl_add_parser.add_argument('ip', help="The IP address to work with.")
-    bl_add_parser.add_argument('-t', '--blacklist-type', action='append', default=['ORG'], choices=CONFIG['default']['blacklists'],
-                                help="The type of metadata from this IP result that should be blacklisted. Can specify multiple times.")
-    bl_add_parser.add_argument('-r', '--reference', action='store', default=None, help="A custom reference for the entry.")
-    
-    bl_remove_parser = bl_subparser.add_parser('remove', help="Remove a blacklist entry.")
-    bl_remove_parser.add_argument('ip', help="The IP address to work with.")
-    bl_remove_parser.add_argument('-t', '--blacklist-type', action='append', default=['ORG'], choices=CONFIG['default']['blacklists'],
-                                help="The type of metadata from this IP result that should be removed from the respective blacklist. Can specify multiple times.")
-    bl_remove_parser.add_argument('-r', '--reference', action='store', default=None, help="Remove entries with this reference.")
+    bl_parser = subparsers.add_parser("blacklist", help="For interacting with the IP Network Organization blacklist.")
+    bl_parser.add_argument("-p", "--print", action="store_true", help="Print the existing blacklist.")
+
+    bl_subparser = bl_parser.add_subparsers(dest="bl_command")
+    bl_add_parser = bl_subparser.add_parser("add", help="Append to a blacklist.")
+    bl_add_parser.add_argument("ip", help="The IP address to work with.")
+    bl_add_parser.add_argument(
+        "-t",
+        "--blacklist-type",
+        action="append",
+        default=["ORG"],
+        choices=CONFIG["default"]["blacklists"],
+        help="The type of metadata from this IP result that should be blacklisted. Can specify multiple times.",
+    )
+    bl_add_parser.add_argument(
+        "-r", "--reference", action="store", default=None, help="A custom reference for the entry."
+    )
+
+    bl_remove_parser = bl_subparser.add_parser("remove", help="Remove a blacklist entry.")
+    bl_remove_parser.add_argument("ip", help="The IP address to work with.")
+    bl_remove_parser.add_argument(
+        "-t",
+        "--blacklist-type",
+        action="append",
+        default=["ORG"],
+        choices=CONFIG["default"]["blacklists"],
+        help="The type of metadata from this IP result that should be removed from the respective blacklist. Can specify multiple times.",
+    )
+    bl_remove_parser.add_argument(
+        "-r", "--reference", action="store", default=None, help="Remove entries with this reference."
+    )
 
     argcomplete.autocomplete(parser)
     args = parser.parse_args(args)
 
     # configure logging
-    logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - [%(levelname)s] %(message)s')
-    coloredlogs.install(level='INFO', logger=LOGGER)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - [%(levelname)s] %(message)s")
+    coloredlogs.install(level="INFO", logger=LOGGER)
 
     if args.debug:
-        coloredlogs.install(level='DEBUG', logger=LOGGER)
+        coloredlogs.install(level="DEBUG", logger=LOGGER)
 
     if args.print_tor_exits:
         for EN in tor.ExitNodes().exit_nodes:
@@ -116,7 +202,7 @@ def main(args=None):
 
     if args.customize:
         # save will write the existing loaded configuration to the SAVED_CONFIG_PATH
-        if save_configuration(CONFIG, config_path='ip_inspector.config.json'):
+        if save_configuration(CONFIG, config_path="ip_inspector.config.json"):
             print("Wrote the existing configuration to: ip_inspector.config.json")
             print("Make any changes to that configuration file and then supply it to `ip-inspector --config-path`")
             return True
@@ -124,15 +210,15 @@ def main(args=None):
 
     if args.license_key:
         data = {}
-        data['maxmind'] = {'license_key': args.license_key}
+        data["maxmind"] = {"license_key": args.license_key}
         if not save_configuration(data):
-            return False 
+            return False
         LOGGER.info(f"saved license key.")
         # put it in the right place so this session can continue
-        CONFIG['maxmind']['license_key'] = args.license_key
-    
+        CONFIG["maxmind"]["license_key"] = args.license_key
+
     if args.set_default_context:
-        if save_configuration({'default': {'tracking_context': args.set_default_context}}):
+        if save_configuration({"default": {"tracking_context": args.set_default_context}}):
             LOGGER.info(f"saved default infrastructure tracking context to '{args.set_default_context}'")
             return True
         LOGGER.error(f"couldn't save default tracking context.")
@@ -149,7 +235,9 @@ def main(args=None):
         with get_session() as session:
             result = create_infrastructure_context(session, args.create_tracking_context)
             if not result:
-                LOGGER.error(f"failed to create new infrastructure context for tracking by name: {args.create_tracking_context}")
+                LOGGER.error(
+                    f"failed to create new infrastructure context for tracking by name: {args.create_tracking_context}"
+                )
                 return False
             LOGGER.info(f"created new infrastructure context: {result}")
             return True
@@ -165,56 +253,79 @@ def main(args=None):
 
     ## Maxmind ##
     if args.update_databases:
-        if not maxmind.update_databases(license_key=CONFIG['maxmind']['license_key']):
+        if not maxmind.update_databases(license_key=CONFIG["maxmind"]["license_key"]):
             return False
         return True
 
     ## IP Inspection ##
-    mmi = Inspector(maxmind_license_key=CONFIG['maxmind']['license_key'])
+    mmi = Inspector(maxmind_license_key=CONFIG["maxmind"]["license_key"])
 
     ## Blacklist/Whitelist options ##
-    if args.command == 'blacklist' or args.command == 'whitelist':
+    if args.command == "blacklist" or args.command == "whitelist":
         if args.print:
             with get_session() as session:
-                if args.command == 'blacklist':
+                if args.command == "blacklist":
                     for bl in get_blacklists(session):
                         print(bl)
                     return True
-                if args.command == 'whitelist':
+                if args.command == "whitelist":
                     for wl in get_whitelists(session):
                         print(wl)
                     return True
 
         if args.ip:
             ip = args.ip
-            if '/' in ip:
-                ip = ip[:ip.rfind('/')]
+            if "/" in ip:
+                ip = ip[: ip.rfind("/")]
             iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
 
-        if args.command == 'blacklist':
-            if args.bl_command == 'add':
-                result = append_to_('blacklist', iip, fields=list(set(args.blacklist_type)), context_id=infrastructure_context_map[args.context], reference=args.reference)
+        if args.command == "blacklist":
+            if args.bl_command == "add":
+                result = append_to_(
+                    "blacklist",
+                    iip,
+                    fields=list(set(args.blacklist_type)),
+                    context_id=infrastructure_context_map[args.context],
+                    reference=args.reference,
+                )
                 if result:
                     LOGGER.info(f"created: {result}")
                     return True
                 return False
-            elif args.bl_command == 'remove':
-                if remove_from_('blacklist', iip, fields=list(set(args.blacklist_type)), context_id=infrastructure_context_map[args.context], reference=args.reference):
+            elif args.bl_command == "remove":
+                if remove_from_(
+                    "blacklist",
+                    iip,
+                    fields=list(set(args.blacklist_type)),
+                    context_id=infrastructure_context_map[args.context],
+                    reference=args.reference,
+                ):
                     LOGGER.info(f"successfully removed matching blacklist entries.")
                     return True
                 else:
                     LOGGER.info(f"no blacklist entries found for removal.")
                     return False
 
-        if args.command == 'whitelist':
-            if args.wl_command == 'add':
-                result = append_to_('whitelist', iip, fields=list(set(args.whitelist_type)), context_id=infrastructure_context_map[args.context])
+        if args.command == "whitelist":
+            if args.wl_command == "add":
+                result = append_to_(
+                    "whitelist",
+                    iip,
+                    fields=list(set(args.whitelist_type)),
+                    context_id=infrastructure_context_map[args.context],
+                )
                 if result:
                     LOGGER.info(f"created: {result}")
                     return True
                 return False
-            elif args.wl_command == 'remove':
-                if remove_from_('whitelist', iip, fields=list(set(args.whitelist_type)), context_id=infrastructure_context_map[args.context], reference=args.reference):
+            elif args.wl_command == "remove":
+                if remove_from_(
+                    "whitelist",
+                    iip,
+                    fields=list(set(args.whitelist_type)),
+                    context_id=infrastructure_context_map[args.context],
+                    reference=args.reference,
+                ):
                     LOGGER.info(f"successfully removed matching whitelist entries.")
                     return True
                 else:
@@ -225,14 +336,14 @@ def main(args=None):
     ## IP Inspection only options ##
     if args.from_stdin:
         if args.fields and args.csv:
-            header = "IP/Network," + ','.join(args.fields)
+            header = "IP/Network," + ",".join(args.fields)
             print(header)
         iplist = [line.strip() for line in sys.stdin]
         for ip in iplist:
             network = None
-            if '/' in ip:
+            if "/" in ip:
                 network = ip
-                ip = ip[:ip.rfind('/')]
+                ip = ip[: ip.rfind("/")]
             try:
                 iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
             except ValueError:
@@ -251,13 +362,13 @@ def main(args=None):
                             result_string += '"{}",'.format(iip.get(field))
                         else:
                             result_string += " | {}: {}".format(field, iip.get(field))
-                    if result_string.endswith(','):
+                    if result_string.endswith(","):
                         print(result_string[:-1])
                     else:
                         print(result_string)
                 else:
                     print(iip)
-        return 
+        return
 
     if args.ip:
         iip = mmi.inspect(args.ip, infrastructure_context=infrastructure_context_map[args.context])

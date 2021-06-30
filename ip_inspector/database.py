@@ -17,9 +17,7 @@ LOGGER = logging.getLogger("ip-inspector.database")
 DATABASE_PATH = f"{DATA_DIR}/tracking_database.sqlite"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 
 Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -29,37 +27,41 @@ Base = declarative_base()
 DEFAULT_INFRASTRUCTURE_CONTEXT_ID = 1
 DEFAULT_INFRASTRUCTURE_CONTEXT_NAME = "default"
 
+
 class InfrastructureContext(Base):
     __tablename__ = "infrastructure_context"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, unique=True, index=True)
     insert_date = Column(DateTime, default=datetime.utcnow)
-    
+
     def __str__(self):
         return f"Infrastructure Context: ID={self.id}, Name={self.name}, Insert Date={self.insert_date}"
+
 
 class BlacklistEntry(Base):
     __tablename__ = "blacklist_map"
 
     id = Column(Integer, index=True, primary_key=True)
-    infrastructure_id = Column(Integer, ForeignKey('infrastructure_context.id'), index=True)
+    infrastructure_id = Column(Integer, ForeignKey("infrastructure_context.id"), index=True)
     org = Column(String, nullable=True)
     asn = Column(Integer, nullable=True)
     country = Column(String, nullable=True)
     insert_date = Column(DateTime, default=datetime.utcnow)
-    reference =  Column(String, nullable=True)
+    reference = Column(String, nullable=True)
 
     def to_dict(self):
         """Return the BlacklistEntry as a dictionary."""
-        return {'id': self.id,
-                'entry_type': 'blacklist',
-                'infrastructure_context_id': self.infrastructure_id,
-                'org': self.org,
-                'asn': self.asn,
-                'country': self.country,
-                'insert_date': self.insert_date,
-                'reference': self.reference}
+        return {
+            "id": self.id,
+            "entry_type": "blacklist",
+            "infrastructure_context_id": self.infrastructure_id,
+            "org": self.org,
+            "asn": self.asn,
+            "country": self.country,
+            "insert_date": self.insert_date,
+            "reference": self.reference,
+        }
 
     @property
     def blacklisted_fields(self):
@@ -72,7 +74,7 @@ class BlacklistEntry(Base):
         if self.country:
             _fields.append("Country")
         return _fields
-        
+
     def __str__(self):
         txt = f"Blacklist Entry #{self.id}: "
         for key, value in self.to_dict().items():
@@ -81,27 +83,30 @@ class BlacklistEntry(Base):
             txt += f"{key}={value} "
         return txt
 
+
 class WhitelistEntry(Base):
     __tablename__ = "whitelist_map"
 
     id = Column(Integer, index=True, primary_key=True)
-    infrastructure_id = Column(Integer, ForeignKey('infrastructure_context.id'), index=True)
+    infrastructure_id = Column(Integer, ForeignKey("infrastructure_context.id"), index=True)
     org = Column(String, nullable=True)
     asn = Column(Integer, nullable=True)
     country = Column(String, nullable=True)
     insert_date = Column(DateTime, default=datetime.utcnow)
-    reference =  Column(String, nullable=True)
+    reference = Column(String, nullable=True)
 
     def to_dict(self):
         """Return the WhitelistEntry as a dictionary."""
-        return {'id': self.id,
-                'entry_type': 'whitelist',
-                'infrastructure_context_id': self.infrastructure_id,
-                'org': self.org,
-                'asn': self.asn,
-                'country': self.country,
-                'insert_date': self.insert_date,
-                'reference': self.reference}
+        return {
+            "id": self.id,
+            "entry_type": "whitelist",
+            "infrastructure_context_id": self.infrastructure_id,
+            "org": self.org,
+            "asn": self.asn,
+            "country": self.country,
+            "insert_date": self.insert_date,
+            "reference": self.reference,
+        }
 
     @property
     def whitelisted_fields(self):
@@ -123,6 +128,7 @@ class WhitelistEntry(Base):
             txt += f"{key}={value} "
         return txt
 
+
 def get_session():
     """Get a database session."""
     db = Session()
@@ -131,6 +137,7 @@ def get_session():
     finally:
         db.close()
         LOGGER.debug("closed session")
+
 
 ## Infrastructure Context functions ##
 def create_infrastructure_context(db: Session, context_name: str):
@@ -152,6 +159,7 @@ def create_infrastructure_context(db: Session, context_name: str):
     db.refresh(infrastructure)
     return infrastructure
 
+
 def get_infrastructure_context_map(db: Session):
     """Create InfrastructureContext.name -> InfrastructureContext.id map."""
     context_map = {}
@@ -159,21 +167,25 @@ def get_infrastructure_context_map(db: Session):
         context_map[context.name] = context.id
     return context_map
 
+
 def get_all_infrastructure_context(db: Session):
     """Get all InfrastructureContext"""
     return db.query(InfrastructureContext).all()
+
 
 def get_infrastructure_context_by_name(db: Session, context_name: str):
     """Get InfrastructureContext by name"""
     return db.query(InfrastructureContext).filter(InfrastructureContext.name == context_name).first()
 
+
 def get_infrastructure_context_by_id(db: Session, context_id: int):
     """Get InfrastructureContext by ID"""
     return db.query(InfrastructureContext).filter(InfrastructureContext.id == context_id).first()
 
+
 def delete_infrastructure_context(db: Session, context_id: int):
     """Delete an infrastructure tracking context.
-    
+
     Args:
         db: A database session.
         context_id: The ID of the InfrastructureContext to delete..
@@ -183,7 +195,7 @@ def delete_infrastructure_context(db: Session, context_id: int):
     if context_id == DEFAULT_INFRASTRUCTURE_CONTEXT_ID:
         LOGGER.error(f"Can not delete default context ID={DEFAULT_INFRASTRUCTURE_CONTEXT_ID}.")
         return None
-    query = db.query(InfrastructureContext).filter(InfrastructureContext.id==context_id)
+    query = db.query(InfrastructureContext).filter(InfrastructureContext.id == context_id)
     if not query.count():
         LOGGER.warning(f"no infrastructure context found by id: {context_id}")
         return False
@@ -192,18 +204,28 @@ def delete_infrastructure_context(db: Session, context_id: int):
     db.commit()
     return True
 
+
 ## Blacklist and Whitelist functions ##
 def get_blacklists(db: Session):
     """Get all blacklists."""
     return db.query(BlacklistEntry).all()
 
+
 def get_whitelists(db: Session):
     """Get all blacklists."""
     return db.query(WhitelistEntry).all()
 
-def append_to_blacklist(db: Session, context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID, org: str=None, asn: int=None, country: str=None, reference: str=None):
+
+def append_to_blacklist(
+    db: Session,
+    context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID,
+    org: str = None,
+    asn: int = None,
+    country: str = None,
+    reference: str = None,
+):
     """Add an entry to this context blacklist.
-    
+
     Args:
         db: A database session.
         context: The name or ID of an InfrastructureContext.
@@ -233,9 +255,17 @@ def append_to_blacklist(db: Session, context: Union[str, int]=DEFAULT_INFRASTRUC
     LOGGER.debug(f"created {bl_entry}")
     return bl_entry
 
-def append_to_whitelist(db: Session, context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID, org: str=None, asn: int=None, country: str=None, reference: str=None):
+
+def append_to_whitelist(
+    db: Session,
+    context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID,
+    org: str = None,
+    asn: int = None,
+    country: str = None,
+    reference: str = None,
+):
     """Add an entry to this context whitelist.
-    
+
     Args:
         db: A database session.
         context: The name or ID of an InfrastructureContext.
@@ -265,11 +295,19 @@ def append_to_whitelist(db: Session, context: Union[str, int]=DEFAULT_INFRASTRUC
     LOGGER.debug(f"created {wl_entry}")
     return wl_entry
 
-def remove_from_blacklist(db: Session, context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID, org: str=None, asn: int=None, country: str=None, reference: str=None):
+
+def remove_from_blacklist(
+    db: Session,
+    context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID,
+    org: str = None,
+    asn: int = None,
+    country: str = None,
+    reference: str = None,
+):
     """Remove an entry to this context blacklist.
 
     Remove all entries that match *any* of the details for the respective context.
-    
+
     Args:
         db: A database session.
         context: The name or ID of an InfrastructureContext.
@@ -292,7 +330,7 @@ def remove_from_blacklist(db: Session, context: Union[str, int]=DEFAULT_INFRASTR
             LOGGER.warning(f"no infrastructure by context by name '{context}")
             return False
         context_id = icontext.id
-    bl_query = db.query(BlacklistEntry).filter(BlacklistEntry.infrastructure_id==context_id)
+    bl_query = db.query(BlacklistEntry).filter(BlacklistEntry.infrastructure_id == context_id)
     criteria = []
     if org is not None:
         criteria.append(BlacklistEntry.org == org)
@@ -314,11 +352,19 @@ def remove_from_blacklist(db: Session, context: Union[str, int]=DEFAULT_INFRASTR
     db.commit()
     return True
 
-def remove_from_whitelist(db: Session, context: Union[str, int]=DEFAULT_INFRASTRUCTURE_CONTEXT_ID, org: str=None, asn: int=None, country: str=None, reference: str=None):
+
+def remove_from_whitelist(
+    db: Session,
+    context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID,
+    org: str = None,
+    asn: int = None,
+    country: str = None,
+    reference: str = None,
+):
     """Remove an entry from this context whitelist.
 
     Remove all entries that match *any* of the details for the respective context.
-    
+
     Args:
         db: A database session.
         context: The name or ID of an InfrastructureContext.
@@ -341,7 +387,7 @@ def remove_from_whitelist(db: Session, context: Union[str, int]=DEFAULT_INFRASTR
             LOGGER.warning(f"no infrastructure by context by name '{context}")
             return False
         context_id = icontext.id
-    wl_query = db.query(WhitelistEntry).filter(WhitelistEntry.infrastructure_id==context_id)
+    wl_query = db.query(WhitelistEntry).filter(WhitelistEntry.infrastructure_id == context_id)
     criteria = []
     if org is not None:
         criteria.append(WhitelistEntry.org == org)
@@ -364,9 +410,11 @@ def remove_from_whitelist(db: Session, context: Union[str, int]=DEFAULT_INFRASTR
     return True
 
 
-def check_blacklist(db: Session, context: Union[str, int, None]=None, org: str=None, asn: int=None, country: str=None) -> List[BlacklistEntry]:
+def check_blacklist(
+    db: Session, context: Union[str, int, None] = None, org: str = None, asn: int = None, country: str = None
+) -> List[BlacklistEntry]:
     """Return any matching blacklist entries.
-    
+
     At least one of `org`, `asn`, `country` is required.
 
     Args:
@@ -380,7 +428,9 @@ def check_blacklist(db: Session, context: Union[str, int, None]=None, org: str=N
        A list of BlacklistEntry objects or None.
     """
     if org is None and asn is None and country is None:
-        LOGGER.info("blacklist checking requires one of [ORG, ASN, Country]. Do a direct DB query if you need something special.")
+        LOGGER.info(
+            "blacklist checking requires one of [ORG, ASN, Country]. Do a direct DB query if you need something special."
+        )
         return False
     context_id = context
     if context and isinstance(context, str):
@@ -391,7 +441,7 @@ def check_blacklist(db: Session, context: Union[str, int, None]=None, org: str=N
             return None
         context_id = icontext.id
     if context_id and isinstance(context_id, int):
-        bl_query = db.query(BlacklistEntry).filter(BlacklistEntry.infrastructure_id==context_id)
+        bl_query = db.query(BlacklistEntry).filter(BlacklistEntry.infrastructure_id == context_id)
     else:
         bl_query = db.query(BlacklistEntry)
     criteria = []
@@ -405,9 +455,12 @@ def check_blacklist(db: Session, context: Union[str, int, None]=None, org: str=N
     LOGGER.debug(f"query: {bl_query}")
     return bl_query.all()
 
-def check_whitelist(db: Session, context: Union[str, int, None]=None, org: str=None, asn: int=None, country: str=None) -> List[WhitelistEntry]:
+
+def check_whitelist(
+    db: Session, context: Union[str, int, None] = None, org: str = None, asn: int = None, country: str = None
+) -> List[WhitelistEntry]:
     """Return any matching whitelist entries.
-    
+
     At least one of `org`, `asn`, `country` is required.
 
     Args:
@@ -421,7 +474,9 @@ def check_whitelist(db: Session, context: Union[str, int, None]=None, org: str=N
        A list of WhitelistEntry objects or None.
     """
     if org is None and asn is None and country is None:
-        LOGGER.info("whitelist checking requires one of [ORG, ASN, Country]. Do a direct DB query if you need something special.")
+        LOGGER.info(
+            "whitelist checking requires one of [ORG, ASN, Country]. Do a direct DB query if you need something special."
+        )
         return False
     context_id = context
     if isinstance(context, str):
@@ -432,7 +487,7 @@ def check_whitelist(db: Session, context: Union[str, int, None]=None, org: str=N
             return None
         context_id = icontext.id
     if context_id and isinstance(context_id, int):
-        wl_query = db.query(WhitelistEntry).filter(WhitelistEntry.infrastructure_id==context_id)
+        wl_query = db.query(WhitelistEntry).filter(WhitelistEntry.infrastructure_id == context_id)
     else:
         wl_query = db.query(WhitelistEntry)
     criteria = []
@@ -451,6 +506,7 @@ def check_whitelist(db: Session, context: Union[str, int, None]=None, org: str=N
 def create_tables():
     """Create the database tables."""
     Base.metadata.create_all(bind=engine)
+
 
 create_tables()
 

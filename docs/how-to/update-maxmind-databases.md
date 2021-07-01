@@ -44,4 +44,4 @@ if maxmind.update_databases(license_key=license_key, proxies=proxies):
 ```
 
 ---
-[Click here](../../readme.md) to go back to the main page.
+[Click here](../../README.md) to go back to the main page.

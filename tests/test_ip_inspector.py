@@ -57,10 +57,11 @@ def test_inspected_ip(test_database):
     assert iip.get("ASN") == 15169
     assert iip.ip == ip
 
-    from ip_inspector.database import check_whitelist, check_blacklist, get_session
+    from ip_inspector.database import check_whitelist, check_blacklist, get_db_session
 
-    blacklist_results = check_blacklist(get_session(), org=iip.get("ORG"))
-    # do not whitelist with anything other than a WhitelistEntry
+    with get_db_session() as session:
+        blacklist_results = check_blacklist(session, org=iip.get("ORG"))
+        # do not whitelist with anything other than a WhitelistEntry
     with pytest.raises(AssertionError):
         iip.set_whitelist(blacklist_results)
     assert iip.set_blacklist(blacklist_results) == True
@@ -78,7 +79,8 @@ def test_inspected_ip(test_database):
     iip.remove_blacklist()
     assert iip.is_blacklisted == False
 
-    whitelist_results = check_whitelist(get_session(), context=700, org=iip.get("ORG"))
+    with get_db_session() as session:
+        whitelist_results = check_whitelist(session, context=700, org=iip.get("ORG"))
     with pytest.raises(AssertionError):
         iip.set_blacklist(whitelist_results)
     assert iip.set_whitelist(whitelist_results) == True
@@ -129,21 +131,25 @@ def test_append_to_(fresh_database):
 
 def test_remove_from_(test_database):
     from ip_inspector import remove_from_
-    from ip_inspector.database import BlacklistEntry, WhitelistEntry, get_whitelists, get_blacklists, get_session
+    from ip_inspector.database import BlacklistEntry, WhitelistEntry, get_whitelists, get_blacklists, get_db_session
 
     iip = get_inspected_ip()
     with pytest.raises(ValueError):
         remove_from_("blah", iip, fields=["ORG"])
-    assert len(get_blacklists(get_session())) == 5
+    with get_db_session() as session:
+        assert len(get_blacklists(session)) == 5
     assert remove_from_("blacklist", iip, fields=["asdf"]) == False
     assert remove_from_("blacklist", iip, fields=["ORG"], context_id=5) == False
     assert remove_from_("blacklist", iip, fields=["ORG"], context_id=1) == None
     iip._infrastructure_context = 2
     assert remove_from_("blacklist", iip, fields=["ORG"], context_id=2) == True
-    assert len(get_blacklists(get_session())) == 3
-    assert len(get_whitelists(get_session())) == 5
+    with get_db_session() as session:
+        assert len(get_blacklists(session)) == 3
+        assert len(get_whitelists(session)) == 5
     assert remove_from_("whitelist", iip, fields=["ASN"], context_id=2) == True
-    assert len(get_whitelists(get_session())) == 4
+    with get_db_session() as session:
+        assert len(get_whitelists(session)) == 4
     iip._infrastructure_context = 700
     assert remove_from_("whitelist", iip, fields=["ORG"], context_id=700, reference=iip.ip) == True
-    assert len(get_whitelists(get_session())) == 3
+    with get_db_session() as session:
+        assert len(get_whitelists(session)) == 3

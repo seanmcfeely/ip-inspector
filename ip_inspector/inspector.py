@@ -7,7 +7,7 @@ from typing import Union, List
 from ip_inspector.config import CONFIG, WORK_DIR
 from ip_inspector import maxmind, tor
 from ip_inspector.database import (
-    get_session,
+    get_db_session,
     get_infrastructure_context_map,
     append_to_blacklist,
     append_to_whitelist,
@@ -96,7 +96,7 @@ class Inspected_IP(maxmind.MaxMind_IP):
         self._whitelisted_fields = []
 
     def refresh(self):
-        with get_session() as session:
+        with get_db_session() as session:
             blacklist_results = check_blacklist(
                 session,
                 context=self._infrastructure_context,
@@ -189,7 +189,7 @@ class Inspector:
                 tor_exit_node=self.tor_exits.is_exit_node(ip),
                 _infrastructure_context=infrastructure_context,
             )
-            with get_session() as session:
+            with get_db_session() as session:
                 blacklist_results = check_blacklist(
                     session,
                     context=infrastructure_context,
@@ -290,7 +290,7 @@ def append_to_(
             country = iip.get(field)
     if reference is None:
         reference = iip.ip
-    with get_session() as session:
+    with get_db_session() as session:
         if list_type == "blacklist":
             entry = append_to_blacklist(
                 session, context=context_id, org=org, asn=asn, country=country, reference=reference
@@ -342,7 +342,7 @@ def remove_from_(
         if field == "Country":
             country = iip.get(field)
 
-    with get_session() as session:
+    with get_db_session() as session:
         if list_type == "blacklist":
             result = remove_from_blacklist(
                 session, context=context_id, org=org, asn=asn, country=country, reference=reference

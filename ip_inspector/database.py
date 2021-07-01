@@ -1,5 +1,6 @@
 """All database functionality and interaction."""
 
+import contextlib
 import logging
 from datetime import datetime
 
@@ -19,7 +20,7 @@ SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 
-Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Session = sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
 Base = declarative_base()
 
@@ -128,15 +129,15 @@ class WhitelistEntry(Base):
             txt += f"{key}={value} "
         return txt
 
-
-def get_session():
+# Dependency
+@contextlib.contextmanager
+def get_db_session():
     """Get a database session."""
     db = Session()
     try:
-        return db
+        yield db
     finally:
         db.close()
-        LOGGER.debug("closed session")
 
 
 ## Infrastructure Context functions ##
@@ -511,6 +512,6 @@ def create_tables():
 create_tables()
 
 # create default context
-with get_session() as session:
+with get_db_session() as session:
     if not get_infrastructure_context_by_id(session, DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         create_infrastructure_context(session, DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)

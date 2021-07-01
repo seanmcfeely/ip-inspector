@@ -15,7 +15,7 @@ from ip_inspector import maxmind, tor
 from ip_inspector import Inspector, append_to_, remove_from_
 
 from ip_inspector.database import (
-    get_session,
+    get_db_session,
     get_infrastructure_context_map,
     create_infrastructure_context,
     delete_infrastructure_context,
@@ -85,7 +85,7 @@ def main(args=None):
 
     default_context_name = CONFIG["default"].get("tracking_context", DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
     infrastructure_context_map = {}
-    with get_session() as session:
+    with get_db_session() as session:
         infrastructure_context_map = get_infrastructure_context_map(session)
     context_choices = list(infrastructure_context_map.keys())
     default_context_id = infrastructure_context_map.get(default_context_name, 1)
@@ -226,13 +226,13 @@ def main(args=None):
 
     ## InfrastructureContext options ##
     if args.print_tracking_contexts:
-        with get_session() as session:
+        with get_db_session() as session:
             for ic in get_all_infrastructure_context(session):
                 print(ic)
         return True
 
     if args.create_tracking_context:
-        with get_session() as session:
+        with get_db_session() as session:
             result = create_infrastructure_context(session, args.create_tracking_context)
             if not result:
                 LOGGER.error(
@@ -243,7 +243,7 @@ def main(args=None):
             return True
 
     if args.delete_tracking_context:
-        with get_session() as session:
+        with get_db_session() as session:
             result = delete_infrastructure_context(session, args.delete_tracking_context)
             if not result:
                 LOGGER.error(f"failed to delete infrastructure context: {args.delete_tracking_context}")
@@ -263,7 +263,7 @@ def main(args=None):
     ## Blacklist/Whitelist options ##
     if args.command == "blacklist" or args.command == "whitelist":
         if args.print:
-            with get_session() as session:
+            with get_db_session() as session:
                 if args.command == "blacklist":
                     for bl in get_blacklists(session):
                         print(bl)

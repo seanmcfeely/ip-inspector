@@ -5,7 +5,7 @@ import pytest
 from tests import *
 
 
-def test_main_basic_options():
+def test_main_basic_options(test_database):
     from ip_inspector.cli import main
 
     # just test some basics
@@ -25,7 +25,7 @@ def test_main_basic_options():
     # does not return so more argument executions can continue
     # so None if no other options are set
     assert main(["-lk", f"{license_key}"]) == None
-    assert main(["--set-default-context", "default"]) == True
+    assert main(["--set-default-context", "test_another_context"]) == True
     assert main(["-u"]) == True
 
 

@@ -13,6 +13,9 @@ TEST_DATA_DIR = os.path.join(TEST_WORK_DIR, "data")
 # explicitly set this to prevent accidental overright of a prod file
 SAVED_CONFIG_PATH = os.path.join(TEST_ETC_DIR, "local.config.overrides.json")
 
+# override XXX or just use default?
+DEFAULT_INFRASTRUCTURE_CONTEXT_NAME = "test_default_context"
+
 ## helpers ##
 def get_real_license_key():
     from ip_inspector.config import load_configuration, DEFAULT_WORK_DIR
@@ -92,27 +95,28 @@ def fresh_database():
 def test_database(fresh_database):
     """Database with content."""
     from ip_inspector.database import (
-        get_session,
+        get_db_session,
         create_infrastructure_context,
         append_to_blacklist,
         append_to_whitelist,
     )
 
-    create_infrastructure_context(get_session(), "test_default_context")
-    create_infrastructure_context(get_session(), "test_another_context")
+    with get_db_session() as session:
+        create_infrastructure_context(session, "test_default_context")
+        create_infrastructure_context(session, "test_another_context")
 
-    append_to_whitelist(
-        get_session(), context=1, org="float stack", asn=54, country="Canada", reference="Cartoon Network"
-    )
-    append_to_whitelist(get_session(), context=2, org="GOOGLE", reference="8.8.8.8")
-    append_to_whitelist(get_session(), context=2, org="Microsoft", reference="Windopenw")
-    append_to_whitelist(get_session(), context=700, org="GOOGLE", reference="8.8.8.8")
-    append_to_whitelist(get_session(), context=2, asn=15169, reference="8.8.8.8")
+        append_to_whitelist(
+            session, context=1, org="float stack", asn=54, country="Canada", reference="Cartoon Network"
+        )
+        append_to_whitelist(session, context=2, org="GOOGLE", reference="8.8.8.8")
+        append_to_whitelist(session, context=2, org="Microsoft", reference="Windopenw")
+        append_to_whitelist(session, context=700, org="GOOGLE", reference="8.8.8.8")
+        append_to_whitelist(session, context=2, asn=15169, reference="8.8.8.8")
 
-    append_to_blacklist(
-        get_session(), context=1, org="float stack void", asn=55, country="United States", reference="SpaceJam Network"
-    )
-    append_to_blacklist(get_session(), context=2, org="GOOGLE", reference="test0")
-    append_to_blacklist(get_session(), context=2, org="GOOGLE", reference="test")
-    append_to_blacklist(get_session(), context=2, org="G00GLE", reference=None)
-    append_to_blacklist(get_session(), context=700, org="EHlo", reference="test700")
+        append_to_blacklist(
+            session, context=1, org="float stack void", asn=55, country="United States", reference="SpaceJam Network"
+        )
+        append_to_blacklist(session, context=2, org="GOOGLE", reference="test0")
+        append_to_blacklist(session, context=2, org="GOOGLE", reference="test")
+        append_to_blacklist(session, context=2, org="G00GLE", reference=None)
+        append_to_blacklist(session, context=700, org="EHlo", reference="test700")

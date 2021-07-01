@@ -6,11 +6,14 @@ from tests import *
 
 
 def test_maxmind_upstream_database_hashes():
+    # requires a real license key
     from ip_inspector.config import CONFIG
     from ip_inspector.maxmind import upstream_maxmind_md5
 
     first_database_name = CONFIG["maxmind"]["database_names"][0]
     license_key = get_real_license_key()
+    if not license_key:
+        sys.stderr.write("[TEST ERROR] MISSING MAXMIND LICENSE KEY. TEST WILL FAIL.")
 
     md5 = upstream_maxmind_md5(first_database_name, license_key=license_key)
     assert isinstance(md5, str)
@@ -18,14 +21,18 @@ def test_maxmind_upstream_database_hashes():
 
 
 def test_maxmind_update_databases():
+    # requires a real license key
     from ip_inspector.maxmind import update_databases
 
     license_key = get_real_license_key()
+    if not license_key:
+        sys.stderr.write("[TEST ERROR] MISSING MAXMIND LICENSE KEY. TEST WILL FAIL.")
 
     assert update_databases(license_key=license_key) == True
 
 
 def test_get_local_md5_record():
+    # requires local databases
     from ip_inspector.config import CONFIG
     from ip_inspector.maxmind import get_local_md5_record
 
@@ -46,6 +53,7 @@ def test__validate_database_file_paths():
 
 
 def test_maxmind_client_api():
+    # requires system or local databases
     from ip_inspector.maxmind import Client, MaxMind_IP
 
     mmc = Client(license_key=get_real_license_key())

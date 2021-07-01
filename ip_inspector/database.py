@@ -201,7 +201,7 @@ def delete_infrastructure_context(db: Session, context_id: int):
     if not query.count():
         LOGGER.warning(f"no infrastructure context found by id: {context_id}")
         return False
-    LOGGER.warning(f"deleting {query.one()} Blacklist entries.")
+    LOGGER.warning(f"deleting: {query.one()}")
     query.delete()
     db.commit()
     return True

@@ -26,7 +26,9 @@ See [this page](docs/how-to/update-maxmind-databases.md) for help on how to keep
 
 ## Install
 
-`pip install ip-inspector`
+```
+pip install ip-inspector
+```
 
 ## Quick CLI Intro
 

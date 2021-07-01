@@ -1,11 +1,14 @@
 [tool.poetry]
 name = "ip_inspector"
-version = "0.1.0"
-description = ""
+version = "0.1.1"
+license = "Apache-2.0"
+homepage = "https://github.com/seanmcfeely/ip-inspector"
+description = "IP inspector is an IPv4 and IPv6 address metadata enricher and tracking tool. Use it on the command line and leverage it as a library."
 authors = ["Sean McFeely <mcfeelynaes@gmail.com>"]
+include = ["README.md"]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = ">=3.6.2,<4.0"
 requests = "^2.25.1"
 geoip2 = "^4.2.0"
 argcomplete = "^1.12.3"
@@ -17,6 +20,7 @@ SQLAlchemy = "^1.4.19"
 pytest = "^5.2"
 pytest-mock = "^3.6.1"
 black = "^21.6b0"
+setuptools = "^57.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

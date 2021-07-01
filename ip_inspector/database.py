@@ -129,6 +129,7 @@ class WhitelistEntry(Base):
             txt += f"{key}={value} "
         return txt
 
+
 # Dependency
 @contextlib.contextmanager
 def get_db_session():

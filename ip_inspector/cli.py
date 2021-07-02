@@ -10,7 +10,7 @@ import logging
 import coloredlogs
 
 from pprint import pprint
-from ip_inspector.config import CONFIG, WORK_DIR, save_configuration, load_configuration, update_configuration
+from ip_inspector.config import CONFIG, save_configuration, load_configuration, update_configuration
 from ip_inspector import maxmind, tor
 from ip_inspector import Inspector, append_to_, remove_from_
 

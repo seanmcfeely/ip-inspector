@@ -79,7 +79,7 @@ class BlacklistEntry(Base):
     def __str__(self):
         txt = f"Blacklist Entry #{self.id}: "
         for key, value in self.to_dict().items():
-            if key == "id":
+            if key == "id" or key == "entry_type":
                 continue
             txt += f"{key}={value} "
         return txt
@@ -124,7 +124,7 @@ class WhitelistEntry(Base):
     def __str__(self):
         txt = f"Whitelist Entry #{self.id}: "
         for key, value in self.to_dict().items():
-            if key == "id":
+            if key == "id" or key == "entry_type":
                 continue
             txt += f"{key}={value} "
         return txt

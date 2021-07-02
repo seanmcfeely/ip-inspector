@@ -164,9 +164,6 @@ class Inspector:
         maxmind_license_key: A MaxMind license key.
         tor_exits: An optional list of tor_exit nodes. Eh.
     """
-
-    # change to accept maxmind license key instead?
-    # def __init__(self, mmc: maxmind.Client=maxmind.Client(),tor_exits: Union[tor.ExitNodes, None]=tor.ExitNodes() or None):
     def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None] = tor.ExitNodes() or None):
         self.mmc = maxmind.Client(license_key=maxmind_license_key)
         self.tor_exits = tor_exits

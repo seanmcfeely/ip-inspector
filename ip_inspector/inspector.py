@@ -55,6 +55,8 @@ class Inspected_IP(maxmind.MaxMind_IP):
         if self.is_tor:
             self.map["TOR"] = self.is_tor
         self._infrastructure_context = _infrastructure_context
+        # If network passed instead of IP, IP inspector will set this to that value.
+        self.network_value_passed = False
 
     def set_blacklist(self, blacklist_results):
         if self.is_whitelisted:
@@ -136,6 +138,10 @@ class Inspected_IP(maxmind.MaxMind_IP):
         # return list of fields that point to blacklisted values
         return list(set(self._whitelisted_fields))
 
+    @property
+    def summary_string(self):
+        return f"Inspected_IP: {self.ip} - ORG:{self.get('ORG')} - ASN:{self.get('ASN')} - Country:{self.get('Country')}"
+
     def __str__(self):
         txt = "\t--------------------\n"
         for field in self.map:
@@ -153,6 +159,7 @@ class Inspected_IP(maxmind.MaxMind_IP):
         return txt
 
 
+
 class Inspector:
     """Internet Protocol metadata InfrastructureContext inspector.
 
@@ -164,9 +171,6 @@ class Inspector:
         maxmind_license_key: A MaxMind license key.
         tor_exits: An optional list of tor_exit nodes. Eh.
     """
-
-    # change to accept maxmind license key instead?
-    # def __init__(self, mmc: maxmind.Client=maxmind.Client(),tor_exits: Union[tor.ExitNodes, None]=tor.ExitNodes() or None):
     def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None] = tor.ExitNodes() or None):
         self.mmc = maxmind.Client(license_key=maxmind_license_key)
         self.tor_exits = tor_exits
@@ -182,6 +186,11 @@ class Inspector:
             An Inspected_IP object.
         """
         try:
+            network = None
+            if "/" in ip:
+                network = ip
+                ip = ip[:ip.rfind("/")]
+                LOGGER.debug(f"removing network component from {network}: using {ip}")
             IIP = Inspected_IP(
                 self.mmc.asn(ip),
                 self.mmc.city(ip),
@@ -189,6 +198,8 @@ class Inspector:
                 tor_exit_node=self.tor_exits.is_exit_node(ip),
                 _infrastructure_context=infrastructure_context,
             )
+            if network:
+                IIP.network_value_passed = network
             with get_db_session() as session:
                 blacklist_results = check_blacklist(
                     session,
@@ -211,10 +222,12 @@ class Inspector:
                     IIP.set_whitelist(whitelist_results)
 
             return IIP
-
+        except ValueError:
+                LOGGER.warning(f"{ip} is not a valid ipv4 or ipv6")
+                return None
         except Exception as e:
             LOGGER.warning(f"Problem inspecting ip={ip} : {e}")
-            return None
+            return False
 
     def get(self, ip, infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         """Get IP metadata and enrich with InfrastructureContext Blacklist/Whitelist hits.
@@ -255,6 +268,7 @@ def append_to_(
     # Don't allow whitelisting and blacklisting under the same context
     # Just in case this Inspected_IP is not up-to-date, we spend the cycles to refresh() it.
     iip.refresh()
+    LOGGER.debug(f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}")
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
@@ -280,14 +294,22 @@ def append_to_(
         LOGGER.info("nothing to update.")
         return None
     # first, set field values if the field was passed
+    # NOTE: min of one value is required. Warn if the value requested does not evaluate.
     org = asn = country = None
     for field in fields:
         if field == "ORG":
             org = iip.get(field)
+            if not org:
+                LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "ASN":
             asn = iip.get(field)
+            if not asn:
+                LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "Country":
             country = iip.get(field)
+            if not country:
+                LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
+
     if reference is None:
         reference = iip.ip
     with get_db_session() as session:
@@ -330,6 +352,7 @@ def remove_from_(
         raise ValueError(f"{list_type} is not valid. Must be one of [blacklist, whitelist]")
     # make sure Inspected_IP up-to-date
     iip.refresh()
+    LOGGER.debug(f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}")
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
@@ -337,10 +360,16 @@ def remove_from_(
     for field in fields:
         if field == "ORG":
             org = iip.get(field)
+            if not org:
+                LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "ASN":
             asn = iip.get(field)
+            if not asn:
+                LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "Country":
             country = iip.get(field)
+            if not country:
+                LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
 
     with get_db_session() as session:
         if list_type == "blacklist":

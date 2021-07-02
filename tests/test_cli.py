@@ -77,26 +77,27 @@ def test_main_listing_functions(test_database, capsys):
     assert len(listing) == 5
     assert "float stack" in listing[0]
 
+    # NOTE: with support for from-stdin, all of these will return None
     # append &remove complexities
     ipi = get_inspected_ip()
-    assert main(["-c", "test_another_context", "blacklist", "remove", ipi.ip]) == True
+    assert main(["-c", "test_another_context", "blacklist", "remove", "-i", ipi.ip]) == None
     captured = capsys.readouterr()
     assert "successfully removed matching blacklist entries." in captured.err
-    assert main(["-c", "test_another_context", "whitelist", "remove", ipi.ip]) == True
+    assert main(["-c", "test_another_context", "whitelist", "remove", "-i", ipi.ip]) == None
     captured = capsys.readouterr()
     assert "successfully removed matching whitelist entries." in captured.err
 
     # failed because country="United States" entry under context
-    assert main(["-c", "test_default_context", "blacklist", "add", ipi.ip]) == False
+    assert main(["-c", "test_default_context", "blacklist", "add", "-i", ipi.ip]) == None
     captured = capsys.readouterr()
-    assert main(["-c", "test_default_context", "blacklist", "remove", ipi.ip, "-t", "Country"]) == True
+    assert main(["-c", "test_default_context", "blacklist", "remove", "-i", ipi.ip, "-t", "Country"]) == None
     captured = capsys.readouterr()
     assert "successfully removed matching blacklist entries." in captured.err
-    assert main(["-c", "test_default_context", "blacklist", "add", ipi.ip]) == True
+    assert main(["-c", "test_default_context", "blacklist", "add", "-i", ipi.ip]) == None
     captured = capsys.readouterr()
     assert "created: Blacklist" in captured.err
-    assert main(["-c", "test_default_context", "blacklist", "remove", ipi.ip]) == True
+    assert main(["-c", "test_default_context", "blacklist", "remove", "-i", ipi.ip]) == None
     captured = capsys.readouterr()
-    assert main(["-c", "test_default_context", "whitelist", "add", ipi.ip, "-t", "ASN"]) == True
+    assert main(["-c", "test_default_context", "whitelist", "add", "-i", ipi.ip, "-t", "ASN"]) == None
     captured = capsys.readouterr()
     assert "created: Whitelist" in captured.err

@@ -10,7 +10,7 @@ import logging
 import coloredlogs
 
 from pprint import pprint
-from ip_inspector.config import CONFIG, WORK_DIR, save_configuration, load_configuration, update_configuration
+from ip_inspector.config import CONFIG, save_configuration, load_configuration, update_configuration
 from ip_inspector import maxmind, tor
 from ip_inspector import Inspector, append_to_, remove_from_
 
@@ -111,7 +111,7 @@ def main(args=None):
 
     wl_subparser = wl_parser.add_subparsers(dest="wl_command")
     wl_add_parser = wl_subparser.add_parser("add", help="Append to a whitelist.")
-    wl_add_parser.add_argument("ip", help="The IP address to work with.")
+    wl_add_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
     wl_add_parser.add_argument(
         "-t",
         "--whitelist-type",
@@ -125,7 +125,7 @@ def main(args=None):
     )
 
     wl_remove_parser = wl_subparser.add_parser("remove", help="Remove a whitelist entry.")
-    wl_remove_parser.add_argument("ip", help="The IP address to work with.")
+    wl_remove_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
     wl_remove_parser.add_argument(
         "-t",
         "--whitelist-type",
@@ -147,7 +147,7 @@ def main(args=None):
 
     bl_subparser = bl_parser.add_subparsers(dest="bl_command")
     bl_add_parser = bl_subparser.add_parser("add", help="Append to a blacklist.")
-    bl_add_parser.add_argument("ip", help="The IP address to work with.")
+    bl_add_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
     bl_add_parser.add_argument(
         "-t",
         "--blacklist-type",
@@ -161,7 +161,7 @@ def main(args=None):
     )
 
     bl_remove_parser = bl_subparser.add_parser("remove", help="Remove a blacklist entry.")
-    bl_remove_parser.add_argument("ip", help="The IP address to work with.")
+    bl_remove_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
     bl_remove_parser.add_argument(
         "-t",
         "--blacklist-type",
@@ -273,64 +273,69 @@ def main(args=None):
                         print(wl)
                     return True
 
+        ip_list = []
         if args.ip:
             ip = args.ip
             if "/" in ip:
                 ip = ip[: ip.rfind("/")]
+            ip_list.append(ip)
+
+        if args.from_stdin:
+            ip_list = [line.strip() for line in sys.stdin]
+
+        if not ip_list:
+            LOGGER.info(f"No IP addresses passed, nothing to-do.")
+
+        for ip in ip_list:
             iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
 
-        if args.command == "blacklist":
-            if args.bl_command == "add":
-                result = append_to_(
-                    "blacklist",
-                    iip,
-                    fields=list(set(args.blacklist_type)),
-                    context_id=infrastructure_context_map[args.context],
-                    reference=args.reference,
-                )
-                if result:
-                    LOGGER.info(f"created: {result}")
-                    return True
-                return False
-            elif args.bl_command == "remove":
-                if remove_from_(
-                    "blacklist",
-                    iip,
-                    fields=list(set(args.blacklist_type)),
-                    context_id=infrastructure_context_map[args.context],
-                    reference=args.reference,
-                ):
-                    LOGGER.info(f"successfully removed matching blacklist entries.")
-                    return True
-                else:
-                    LOGGER.info(f"no blacklist entries found for removal.")
-                    return False
+            if args.command == "blacklist":
+                if args.bl_command == "add":
+                    result = append_to_(
+                        "blacklist",
+                        iip,
+                        fields=list(set(args.blacklist_type)),
+                        context_id=infrastructure_context_map[args.context],
+                        reference=args.reference,
+                    )
+                    if result:
+                        LOGGER.info(f"created: {result}")
 
-        if args.command == "whitelist":
-            if args.wl_command == "add":
-                result = append_to_(
-                    "whitelist",
-                    iip,
-                    fields=list(set(args.whitelist_type)),
-                    context_id=infrastructure_context_map[args.context],
-                )
-                if result:
-                    LOGGER.info(f"created: {result}")
-                    return True
-                return False
-            elif args.wl_command == "remove":
-                if remove_from_(
-                    "whitelist",
-                    iip,
-                    fields=list(set(args.whitelist_type)),
-                    context_id=infrastructure_context_map[args.context],
-                    reference=args.reference,
-                ):
-                    LOGGER.info(f"successfully removed matching whitelist entries.")
-                    return True
-                else:
-                    LOGGER.info(f"no whitelist entries found for removal.")
-                    return True
+                elif args.bl_command == "remove":
+                    if remove_from_(
+                        "blacklist",
+                        iip,
+                        fields=list(set(args.blacklist_type)),
+                        context_id=infrastructure_context_map[args.context],
+                        reference=args.reference,
+                    ):
+                        LOGGER.info(f"successfully removed matching blacklist entries.")
+                    else:
+                        LOGGER.info(f"no blacklist entries found for removal.")
+
+            if args.command == "whitelist":
+                if args.wl_command == "add":
+                    result = append_to_(
+                        "whitelist",
+                        iip,
+                        fields=list(set(args.whitelist_type)),
+                        context_id=infrastructure_context_map[args.context],
+                    )
+                    if result:
+                        LOGGER.info(f"created: {result}")
+
+                elif args.wl_command == "remove":
+                    if remove_from_(
+                        "whitelist",
+                        iip,
+                        fields=list(set(args.whitelist_type)),
+                        context_id=infrastructure_context_map[args.context],
+                        reference=args.reference,
+                    ):
+                        LOGGER.info(f"successfully removed matching whitelist entries.")
+                    else:
+                        LOGGER.info(f"no whitelist entries found for removal.")
+
         return
 
     ## IP Inspection only options ##
@@ -340,23 +345,16 @@ def main(args=None):
             print(header)
         iplist = [line.strip() for line in sys.stdin]
         for ip in iplist:
-            network = None
-            if "/" in ip:
-                network = ip
-                ip = ip[: ip.rfind("/")]
-            try:
-                iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
-            except ValueError:
-                LOGGER.warning("{} is not a valid ipv4 or ipv6".format(ip))
+            iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
             if iip:
                 if args.raw_results:
                     print(json.dumps(iip.raw))
                 elif args.pretty_print:
                     pprint(iip.raw)
                 elif args.fields:
-                    result_string = "--> {}".format(network if network else iip.ip)
+                    result_string = f"--> {iip.network_value_passed if iip.network_value_passed else iip.ip}"
                     if args.csv:
-                        result_string = "{},".format(network if network else iip.ip)
+                        result_string = f"{iip.network_value_passed if iip.network_value_passed else iip.ip},"
                     for field in args.fields:
                         if args.csv:
                             result_string += '"{}",'.format(iip.get(field))

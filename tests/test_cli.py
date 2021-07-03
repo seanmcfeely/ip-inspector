@@ -49,7 +49,7 @@ def test_main_inspection(test_database, capsys):
     assert "GOOGLE (!BLACKLISTED!)" in captured.out
     assert main(["-i", ipi.ip, "-c", "test_default_context", "-f", "ORG"]) == True
     captured = capsys.readouterr()
-    assert "GOOGLE\n" == captured.out
+    assert "GOOGLE (!BLACKLISTED!)\n" == captured.out
 
 
 def test_main_json_output(test_database, capsys):

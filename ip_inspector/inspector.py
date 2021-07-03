@@ -140,24 +140,27 @@ class Inspected_IP(maxmind.MaxMind_IP):
 
     @property
     def summary_string(self):
+        # for reference
         return f"Inspected_IP: {self.ip} - ORG:{self.get('ORG')} - ASN:{self.get('ASN')} - Country:{self.get('Country')}"
 
     def __str__(self):
         txt = "\t--------------------\n"
         for field in self.map:
-            if field == "IP" and self.is_tor:
-                txt += f"\t{field}: {self.get(field)} (TOR EXIT)\n"
-            elif self.get(field):
-                if field in self.blacklisted_fields:
-                    txt += f"\t{field}: {self.get(field)} {self._blacklist_str}\n"
-                elif field in self.whitelisted_fields:
-                    txt += f"\t{field}: {self.get(field)} {self._whitelist_str}\n"
-                else:
-                    txt += f"\t{field}: {self.get(field)}\n"
+            if self.get(field):
+                txt += f"\t{field}: {self.get(field)}\n"
             else:
                 txt += f"\t{field}: \n"
         return txt
 
+    def get(self, field):
+        # override the maxmind get method
+        if field == "IP" and self.is_tor:
+            return f"{self.map.get(field)} (TOR EXIT)"
+        if field in self.blacklisted_fields:
+            return f"{self.map.get(field)} {self._blacklist_str}"
+        if field in self.whitelisted_fields:
+            return f"{self.map.get(field)} {self._whitelist_str}"
+        return self.map.get(field, None)
 
 
 class Inspector:
@@ -295,18 +298,19 @@ def append_to_(
         return None
     # first, set field values if the field was passed
     # NOTE: min of one value is required. Warn if the value requested does not evaluate.
+    # get the raw values directly from the map
     org = asn = country = None
     for field in fields:
         if field == "ORG":
-            org = iip.get(field)
+            org = iip.map.get(field)
             if not org:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "ASN":
-            asn = iip.get(field)
+            asn = iip.map.get(field)
             if not asn:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "Country":
-            country = iip.get(field)
+            country = iip.map.get(field)
             if not country:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
 
@@ -356,18 +360,19 @@ def remove_from_(
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
+    # store the raw values directly from the map
     org = asn = country = None
     for field in fields:
         if field == "ORG":
-            org = iip.get(field)
+            org = iip.map.get(field)
             if not org:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "ASN":
-            asn = iip.get(field)
+            asn = iip.map.get(field)
             if not asn:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "Country":
-            country = iip.get(field)
+            country = iip.map.get(field)
             if not country:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
 

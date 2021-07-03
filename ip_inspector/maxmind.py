@@ -163,7 +163,7 @@ def update_databases(
                 with open(os.path.join(VAR_DIR, db + ".md5"), "w") as fp:
                     fp.write(upstream_database_hashes[db])
         os.remove(target_path)
-        LOGGER.info("Deleted {target_path}")
+        LOGGER.info(f"Deleted {target_path}")
 
     return True
 

@@ -189,6 +189,29 @@ def _validate_database_file_paths(
             LOGGER.warning(f"Couldn't find local or system '{db}' database")
     return valid_database_paths
 
+def get_database_locations(
+    license_key=CONFIG["maxmind"]["license_key"],
+    database_files=CONFIG["maxmind"]["local_database_files"],
+    system_database_files=CONFIG["maxmind"]["system_default_database_files"],
+    **requests_kwargs
+):
+    """Located existing databases or try to download them.
+
+    Local databases always override system databases.
+    """
+    database_file_paths = _validate_database_file_paths(
+            database_files=database_files, system_database_files=system_database_files
+        )
+    if not database_file_paths:
+        # try to download
+        if not update_databases(license_key=license_key, **requests_kwargs):
+            LOGGER.error("could not download databasese.")
+            return False
+        database_file_paths = _validate_database_file_paths(
+            database_files=database_files, system_database_files=system_database_files
+        )
+    return database_file_paths
+
 
 class MaxMind_IP(object):
     """A convienice wrapper around the MaxMind Results for an IP address."""
@@ -278,9 +301,11 @@ class Client:
         license_key=CONFIG["maxmind"]["license_key"],
         **requests_kwargs,
     ):
-        # complete the file paths if they exist
-        self.database_files = _validate_database_file_paths(
-            database_files=database_files, system_database_files=system_database_files
+        # locate existing or try to download databases
+        self.database_files = get_database_locations(
+            license_key=license_key,
+            database_files=database_files, system_database_files=system_database_files,
+            **requests_kwargs
         )
 
         self.asn_reader = self.city_reader = self.country_reader = None

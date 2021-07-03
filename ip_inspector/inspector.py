@@ -186,9 +186,12 @@ class Inspector:
         tor_exits: An optional list of tor_exit nodes. Eh.
     """
 
-    def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None] = tor.ExitNodes() or None):
-        self.mmc = maxmind.Client(license_key=maxmind_license_key)
+    def __init__(self, maxmind_license_key: str, tor_exits: bool=True, **requests_kwargs):
+        self.mmc = maxmind.Client(license_key=maxmind_license_key, **requests_kwargs)
         self.tor_exits = tor_exits
+        if tor_exits:
+            self.tor_exits = tor.ExitNodes(**requests_kwargs)
+        
 
     def inspect(self, ip, infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         """Get IP metadata and enrich with InfrastructureContext Blacklist/Whitelist hits.
@@ -206,13 +209,19 @@ class Inspector:
                 network = ip
                 ip = ip[: ip.rfind("/")]
                 LOGGER.debug(f"removing network component from {network}: using {ip}")
+
+            tor_exit = False
+            if self.tor_exits:
+                tor_exit = self.tor_exits.is_exit_node(ip)
+
             IIP = Inspected_IP(
                 self.mmc.asn(ip),
                 self.mmc.city(ip),
                 self.mmc.country(ip),
-                tor_exit_node=self.tor_exits.is_exit_node(ip),
+                tor_exit_node=tor_exit,
                 _infrastructure_context=infrastructure_context,
             )
+            
             if network:
                 IIP.network_value_passed = network
             with get_db_session() as session:

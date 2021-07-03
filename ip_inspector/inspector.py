@@ -141,7 +141,9 @@ class Inspected_IP(maxmind.MaxMind_IP):
     @property
     def summary_string(self):
         # for reference
-        return f"Inspected_IP: {self.ip} - ORG:{self.get('ORG')} - ASN:{self.get('ASN')} - Country:{self.get('Country')}"
+        return (
+            f"Inspected_IP: {self.ip} - ORG:{self.get('ORG')} - ASN:{self.get('ASN')} - Country:{self.get('Country')}"
+        )
 
     def __str__(self):
         txt = "\t--------------------\n"
@@ -174,6 +176,7 @@ class Inspector:
         maxmind_license_key: A MaxMind license key.
         tor_exits: An optional list of tor_exit nodes. Eh.
     """
+
     def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None] = tor.ExitNodes() or None):
         self.mmc = maxmind.Client(license_key=maxmind_license_key)
         self.tor_exits = tor_exits
@@ -192,7 +195,7 @@ class Inspector:
             network = None
             if "/" in ip:
                 network = ip
-                ip = ip[:ip.rfind("/")]
+                ip = ip[: ip.rfind("/")]
                 LOGGER.debug(f"removing network component from {network}: using {ip}")
             IIP = Inspected_IP(
                 self.mmc.asn(ip),
@@ -226,8 +229,8 @@ class Inspector:
 
             return IIP
         except ValueError:
-                LOGGER.warning(f"{ip} is not a valid ipv4 or ipv6")
-                return None
+            LOGGER.warning(f"{ip} is not a valid ipv4 or ipv6")
+            return None
         except Exception as e:
             LOGGER.warning(f"Problem inspecting ip={ip} : {e}")
             return False
@@ -271,7 +274,9 @@ def append_to_(
     # Don't allow whitelisting and blacklisting under the same context
     # Just in case this Inspected_IP is not up-to-date, we spend the cycles to refresh() it.
     iip.refresh()
-    LOGGER.debug(f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}")
+    LOGGER.debug(
+        f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}"
+    )
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
@@ -356,7 +361,9 @@ def remove_from_(
         raise ValueError(f"{list_type} is not valid. Must be one of [blacklist, whitelist]")
     # make sure Inspected_IP up-to-date
     iip.refresh()
-    LOGGER.debug(f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}")
+    LOGGER.debug(
+        f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}"
+    )
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False

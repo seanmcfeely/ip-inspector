@@ -343,7 +343,7 @@ def remove_from_blacklist(
     if reference is not None:
         criteria.append(BlacklistEntry.reference == reference)
     bl_query = bl_query.filter(or_(*criteria))
-    #LOGGER.debug(f"query: {bl_query}")
+    # LOGGER.debug(f"query: {bl_query}")
     if not bl_query.count():
         LOGGER.debug(f"no blacklist entries found for deletion.")
         return None
@@ -400,7 +400,7 @@ def remove_from_whitelist(
     if reference is not None:
         criteria.append(WhitelistEntry.reference == reference)
     wl_query = wl_query.filter(or_(*criteria))
-    #LOGGER.debug(f"query: {wl_query}")
+    # LOGGER.debug(f"query: {wl_query}")
     if not wl_query.count():
         LOGGER.debug(f"no whitelist entries found for deletion.")
         return None
@@ -454,7 +454,7 @@ def check_blacklist(
     if country is not None:
         criteria.append(BlacklistEntry.country == country)
     bl_query = bl_query.filter(or_(*criteria))
-    #LOGGER.debug(f"query: {bl_query}")
+    # LOGGER.debug(f"query: {bl_query}")
     return bl_query.all()
 
 
@@ -500,7 +500,7 @@ def check_whitelist(
     if country is not None:
         criteria.append(WhitelistEntry.country == country)
     wl_query = wl_query.filter(or_(*criteria))
-    #LOGGER.debug(f"query: {wl_query}")
+    # LOGGER.debug(f"query: {wl_query}")
     return wl_query.all()
 
 

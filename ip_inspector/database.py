@@ -60,7 +60,7 @@ class BlacklistEntry(Base):
             "org": self.org,
             "asn": self.asn,
             "country": self.country,
-            "insert_date": self.insert_date,
+            "insert_date": self.insert_date.isoformat(),
             "reference": self.reference,
         }
 
@@ -105,7 +105,7 @@ class WhitelistEntry(Base):
             "org": self.org,
             "asn": self.asn,
             "country": self.country,
-            "insert_date": self.insert_date,
+            "insert_date": self.insert_date.isoformat(),
             "reference": self.reference,
         }
 

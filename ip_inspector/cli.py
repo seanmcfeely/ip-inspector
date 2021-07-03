@@ -348,9 +348,9 @@ def main(args=None):
             iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
             if iip:
                 if args.raw_results:
-                    print(json.dumps(iip.raw))
+                    print(json.dumps(iip.to_dict()))
                 elif args.pretty_print:
-                    pprint(iip.raw)
+                    pprint(iip.to_dict())
                 elif args.fields:
                     result_string = f"--> {iip.network_value_passed if iip.network_value_passed else iip.ip}"
                     if args.csv:
@@ -372,9 +372,9 @@ def main(args=None):
         iip = mmi.inspect(args.ip, infrastructure_context=infrastructure_context_map[args.context])
         if iip:
             if args.raw_results:
-                print(json.dumps(iip.raw))
+                print(json.dumps(iip.to_dict()))
             elif args.pretty_print:
-                pprint(iip.raw)
+                pprint(iip.to_dict())
             elif args.fields:
                 for field in args.fields:
                     print(iip.get(field))

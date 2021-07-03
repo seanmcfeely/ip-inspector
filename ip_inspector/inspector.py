@@ -164,6 +164,15 @@ class Inspected_IP(maxmind.MaxMind_IP):
             return f"{self.map.get(field)} {self._whitelist_str}"
         return self.map.get(field, None)
 
+    def to_dict(self):
+        data = {}
+        data['maxmind'] = self.raw
+        data['tor_exit'] = True if self.is_tor else False
+        data['blacklist_reasons'] = self._blacklist_reasons
+        data['blacklisted_fields'] = self._blacklisted_fields
+        data['whitelist_reasons'] = self._whitelist_reasons
+        data['whitelisted_fields'] =  self._whitelisted_fields
+        return data
 
 class Inspector:
     """Internet Protocol metadata InfrastructureContext inspector.

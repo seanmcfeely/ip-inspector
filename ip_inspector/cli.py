@@ -28,11 +28,8 @@ from ip_inspector.database import (
 LOGGER = logging.getLogger("ip-inspector.cli")
 
 
-def main(args=None):
-    """The main CLI entry point."""
-
-    if not args:
-        args = sys.argv[1:]
+def build_parser():
+    """Build the CLI Argument parser."""
 
     parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Turn on debug logging.")
@@ -88,7 +85,6 @@ def main(args=None):
     with get_db_session() as session:
         infrastructure_context_map = get_infrastructure_context_map(session)
     context_choices = list(infrastructure_context_map.keys())
-    default_context_id = infrastructure_context_map.get(default_context_name, 1)
     parser.add_argument(
         "-c",
         "--context",
@@ -175,11 +171,26 @@ def main(args=None):
     )
 
     argcomplete.autocomplete(parser)
-    args = parser.parse_args(args)
+    return parser
+
+
+def main(args=None):
+    """The main CLI entry point."""
 
     # configure logging
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - [%(levelname)s] %(message)s")
     coloredlogs.install(level="INFO", logger=LOGGER)
+
+    if not args:
+        args = sys.argv[1:]
+
+    parser = build_parser()
+    args = parser.parse_args(args)
+
+    infrastructure_context_map = {}
+    default_context_name = CONFIG["default"].get("tracking_context", DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
+    with get_db_session() as session:
+        infrastructure_context_map = get_infrastructure_context_map(session)
 
     if args.debug:
         coloredlogs.install(level="DEBUG", logger=LOGGER)

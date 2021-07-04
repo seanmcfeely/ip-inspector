@@ -28,10 +28,9 @@ from ip_inspector.database import (
 LOGGER = logging.getLogger("ip-inspector.cli")
 
 
-def build_parser():
+def build_parser(parser: argparse.ArgumentParser):
     """Build the CLI Argument parser."""
 
-    parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Turn on debug logging.")
     parser.add_argument(
         "-u", "--update-databases", default=False, action="store_true", help="Update the MaxMind GeoLite2 Databases"
@@ -174,7 +173,7 @@ def build_parser():
     return parser
 
 
-def main(args=None):
+def main(args=None, parser: argparse.ArgumentParser=None):
     """The main CLI entry point."""
 
     # configure logging
@@ -184,7 +183,10 @@ def main(args=None):
     if not args:
         args = sys.argv[1:]
 
-    parser = build_parser()
+    if parser is None:
+        parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
+
+    parser = build_parser(parser)
     args = parser.parse_args(args)
 
     infrastructure_context_map = {}

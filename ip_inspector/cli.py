@@ -169,25 +169,9 @@ def build_parser(parser: argparse.ArgumentParser):
         "-r", "--reference", action="store", default=None, help="Remove entries with this reference."
     )
 
-    argcomplete.autocomplete(parser)
-    return parser
 
-
-def main(args=None, parser: argparse.ArgumentParser=None):
-    """The main CLI entry point."""
-
-    # configure logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - [%(levelname)s] %(message)s")
-    coloredlogs.install(level="INFO", logger=LOGGER)
-
-    if not args:
-        args = sys.argv[1:]
-
-    if parser is None:
-        parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
-
-    parser = build_parser(parser)
-    args = parser.parse_args(args)
+def execute(args: argparse.Namespace):
+    """Execute arguments."""
 
     infrastructure_context_map = {}
     default_context_name = CONFIG["default"].get("tracking_context", DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
@@ -397,3 +381,21 @@ def main(args=None, parser: argparse.ArgumentParser=None):
         return False
 
     return
+
+
+def main(args=None):
+    """The main CLI entry point."""
+
+    # configure logging
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - [%(levelname)s] %(message)s")
+    coloredlogs.install(level="INFO", logger=LOGGER)
+
+    if not args:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
+    build_parser(parser)
+    argcomplete.autocomplete(parser)
+    args = parser.parse_args(args)
+
+    return execute(args)

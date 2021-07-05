@@ -33,16 +33,18 @@ DATA_DIR = os.path.join(WORK_DIR, "data")
 
 # Any overrides the user provides, such as the maxmind license key are saved here.
 SAVED_CONFIG_PATH = os.path.join(WORK_DIR, ETC_DIR, "local.config.overrides.json")
+# System level overrides can be supplied here:
+SYSTEM_CONFIG_PATH = os.path.join("etc", "ip_inspector", "system.config.overrides.json") 
 
-# def _create_data_structure(config)):
-"""Create the required directory structure."""
-for path in [WORK_DIR, DATA_DIR, VAR_DIR, ETC_DIR]:
-    if not os.path.isdir(path):
-        try:
-            os.mkdir(path)
-        except Exception as e:
-            sys.stderr.write(f"ERROR: cannot create directory {path}: {e}\n")
-            sys.exit(1)
+def _create_data_structure():
+    """Create the required directory structure."""
+    for path in [WORK_DIR, DATA_DIR, VAR_DIR, ETC_DIR]:
+        if not os.path.isdir(path):
+            try:
+                os.mkdir(path)
+            except Exception as e:
+                sys.stderr.write(f"ERROR: cannot create directory {path}: {e}\n")
+                sys.exit(1)
 
 
 def _update_config_dictionary(existing_config: Dict, new_items: Dict) -> Dict:
@@ -125,6 +127,10 @@ def load_configuration(config_path: str = DEFAULT_CONFIG_PATH, saved_config_path
     # load any saved overrides and update the config
     config = _update_config_dictionary(config, _load_saved_json(saved_config_path))
 
+    # load any saved system overrides and update the config
+    if os.path.exists(SYSTEM_CONFIG_PATH):
+        config = _update_config_dictionary(config, _load_saved_json(SYSTEM_CONFIG_PATH))
+
     return config
 
 
@@ -159,7 +165,18 @@ def update_configuration(config_override_path: str, saved_config_path: str = SAV
     return save_configuration(overrides, config_path=saved_config_path)
 
 
-# Load the CONFIG and set the work directory
+# Load the CONFIG and update GLOBALS accordingly
 CONFIG = load_configuration()
 if CONFIG["default"]["work_dir"] == "OVERRIDE":
+    # this means there were no overrides
     CONFIG["default"]["work_dir"] = WORK_DIR
+elif WORK_DIR != CONFIG['default']['work_dir']:
+    # a local or system level config overrode the defaults, update everything
+    WORK_DIR = CONFIG['default']['work_dir']
+    ETC_DIR = os.path.join(WORK_DIR, "etc")
+    VAR_DIR = os.path.join(WORK_DIR, "var")
+    DATA_DIR = os.path.join(WORK_DIR, "data")
+    SAVED_CONFIG_PATH = os.path.join(WORK_DIR, ETC_DIR, "local.config.overrides.json")
+
+# Will raise exception if permissions are inadequate.
+_create_data_structure()

@@ -79,7 +79,7 @@ def get_database_age(database_path):
     """
     if os.path.exists(database_path):
         return time.time() - os.path.getmtime(database_path)
-    LOGGER.error(f"{database_path} does not exist.")  
+    LOGGER.error(f"{database_path} does not exist.")
     return False
 
 
@@ -210,15 +210,15 @@ def get_database_locations(
     license_key=CONFIG["maxmind"]["license_key"],
     database_files=CONFIG["maxmind"]["local_database_files"],
     system_database_files=CONFIG["maxmind"]["system_default_database_files"],
-    **requests_kwargs
+    **requests_kwargs,
 ):
     """Located existing databases or try to download them.
 
     Local databases always override system databases.
     """
     database_file_paths = _validate_database_file_paths(
-            database_files=database_files, system_database_files=system_database_files
-        )
+        database_files=database_files, system_database_files=system_database_files
+    )
     if not database_file_paths:
         # try to download
         if not update_databases(license_key=license_key, **requests_kwargs):
@@ -232,9 +232,9 @@ def get_database_locations(
 
 def are_database_files_up_to_date(
     database_files=CONFIG["maxmind"]["local_database_files"],
-    system_database_files=CONFIG["maxmind"]["system_default_database_files"]
+    system_database_files=CONFIG["maxmind"]["system_default_database_files"],
 ):
-    """Are the databases old? 
+    """Are the databases old?
 
     Considers databases to be current if they're younger than 7 days old.
 
@@ -246,21 +246,21 @@ def are_database_files_up_to_date(
         True if the databases are up-to-date. False otherwise.
     """
     database_file_path_map = database_file_paths = _validate_database_file_paths(
-            database_files=database_files, system_database_files=system_database_files
-        )
-    database_file_paths = database_file_path_map.values()    
+        database_files=database_files, system_database_files=system_database_files
+    )
+    database_file_paths = database_file_path_map.values()
 
     if not database_file_paths:
         LOGGER.warning(f"no databases were found.")
         return False
 
-    one_day = 86400 #seconds
+    one_day = 86400  # seconds
     # This is an all or nothing check.
     up_to_date = True
     for db_path in database_file_paths:
         age = get_database_age(db_path)
         if age > (7 * one_day):
-            days = int(age/one_day)
+            days = int(age / one_day)
             LOGGER.warning(f"{db_path} is more than {days} days old.")
             up_to_date = False
 
@@ -358,8 +358,9 @@ class Client:
         # locate existing or try to download databases
         self.database_files = get_database_locations(
             license_key=license_key,
-            database_files=database_files, system_database_files=system_database_files,
-            **requests_kwargs
+            database_files=database_files,
+            system_database_files=system_database_files,
+            **requests_kwargs,
         )
 
         self.asn_reader = self.city_reader = self.country_reader = None

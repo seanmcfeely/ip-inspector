@@ -166,13 +166,14 @@ class Inspected_IP(maxmind.MaxMind_IP):
 
     def to_dict(self):
         data = {}
-        data['maxmind'] = self.raw
-        data['tor_exit'] = True if self.is_tor else False
-        data['blacklist_reasons'] = self._blacklist_reasons
-        data['blacklisted_fields'] = self._blacklisted_fields
-        data['whitelist_reasons'] = self._whitelist_reasons
-        data['whitelisted_fields'] =  self._whitelisted_fields
+        data["maxmind"] = self.raw
+        data["tor_exit"] = True if self.is_tor else False
+        data["blacklist_reasons"] = self._blacklist_reasons
+        data["blacklisted_fields"] = self._blacklisted_fields
+        data["whitelist_reasons"] = self._whitelist_reasons
+        data["whitelisted_fields"] = self._whitelisted_fields
         return data
+
 
 class Inspector:
     """Internet Protocol metadata InfrastructureContext inspector.
@@ -186,12 +187,11 @@ class Inspector:
         tor_exits: An optional list of tor_exit nodes. Eh.
     """
 
-    def __init__(self, maxmind_license_key: str, tor_exits: bool=True, **requests_kwargs):
+    def __init__(self, maxmind_license_key: str, tor_exits: bool = True, **requests_kwargs):
         self.mmc = maxmind.Client(license_key=maxmind_license_key, **requests_kwargs)
         self.tor_exits = tor_exits
         if tor_exits:
             self.tor_exits = tor.ExitNodes(**requests_kwargs)
-        
 
     def inspect(self, ip, infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         """Get IP metadata and enrich with InfrastructureContext Blacklist/Whitelist hits.
@@ -221,7 +221,7 @@ class Inspector:
                 tor_exit_node=tor_exit,
                 _infrastructure_context=infrastructure_context,
             )
-            
+
             if network:
                 IIP.network_value_passed = network
             with get_db_session() as session:

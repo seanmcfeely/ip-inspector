@@ -39,7 +39,13 @@ def build_parser(parser: argparse.ArgumentParser):
         "-r", "--json", dest="raw_results", action="store_true", help="return results in their raw json format"
     )
     parser.add_argument("-pp", "--pretty-print", action="store_true", help="Pretty print the raw json results")
-    parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="A single IP address to inspect. You can supply this argument more than once.")
+    parser.add_argument(
+        "-i",
+        "--ip",
+        dest="ip_list",
+        action="append",
+        help="A single IP address to inspect. You can supply this argument more than once.",
+    )
     parser.add_argument("--print-tor-exits", action="store_true", help="Get tor exist nodes")
     parser.add_argument(
         "-f",
@@ -185,7 +191,9 @@ def execute(args: argparse.Namespace):
 
     if default_context_name not in infrastructure_context_map.keys():
         if default_context_name != DEFAULT_INFRASTRUCTURE_CONTEXT_NAME:
-            LOGGER.error(f"configured {default_context_name} is not a context in the database. Check your config overrides with `ip-inspector --customize`.")
+            LOGGER.error(
+                f"configured {default_context_name} is not a context in the database. Check your config overrides with `ip-inspector --customize`."
+            )
         else:
             LOGGER.critical(f"The infrastructure tracking database is missing the reqired default context.")
         # let an exception raise

@@ -37,6 +37,7 @@ def testing_environment():
     assert "IP_INSPECTOR_WORK_DIR_PATH" in os.environ
     assert os.environ["IP_INSPECTOR_IGNORE_SYSTEM_CONFIG"] == "true"
     from ip_inspector.config import WORK_DIR
+
     print(f"WORK_DIR: {WORK_DIR}")
     print(f"TEST_WORK_DIR: {TEST_WORK_DIR}")
     assert WORK_DIR == TEST_WORK_DIR

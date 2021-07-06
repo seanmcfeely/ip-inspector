@@ -34,7 +34,8 @@ DATA_DIR = os.path.join(WORK_DIR, "data")
 # Any overrides the user provides, such as the maxmind license key are saved here.
 SAVED_CONFIG_PATH = os.path.join(WORK_DIR, ETC_DIR, "local.config.overrides.json")
 # System level overrides can be supplied here:
-SYSTEM_CONFIG_PATH = os.path.join(os.sep, "etc", "ip_inspector", "system.config.overrides.json") 
+SYSTEM_CONFIG_PATH = os.path.join(os.sep, "etc", "ip_inspector", "system.config.overrides.json")
+
 
 def _create_data_structure():
     """Create the required directory structure."""
@@ -177,9 +178,9 @@ CONFIG = load_configuration()
 if CONFIG["default"]["work_dir"] == "OVERRIDE":
     # this means there were no overrides
     CONFIG["default"]["work_dir"] = WORK_DIR
-elif WORK_DIR != CONFIG['default']['work_dir']:
+elif WORK_DIR != CONFIG["default"]["work_dir"]:
     # a local or system level config overrode the defaults, update everything
-    WORK_DIR = CONFIG['default']['work_dir']
+    WORK_DIR = CONFIG["default"]["work_dir"]
     ETC_DIR = os.path.join(WORK_DIR, "etc")
     VAR_DIR = os.path.join(WORK_DIR, "var")
     DATA_DIR = os.path.join(WORK_DIR, "data")

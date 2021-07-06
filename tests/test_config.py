@@ -75,4 +75,3 @@ def test_load_configuration():
     save_configuration(overrides, config_path=SAVED_CONFIG_PATH)
     config = load_configuration(saved_config_path=SAVED_CONFIG_PATH)
     assert config["default"]["tracking_context"] == "ztestingz"
-

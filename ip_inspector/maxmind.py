@@ -62,7 +62,7 @@ def get_local_md5_record(database_name):
     if os.path.exists(local_path):
         with open(os.path.join(VAR_DIR, database_name + ".md5"), "r") as fp:
             var_md5 = fp.read()
-        LOGGER.info("Got md5={var_md5} for local {database_name}.tar.gz")
+        LOGGER.info(f"Got md5={var_md5} for local {database_name}.tar.gz")
         return var_md5
     return False
 

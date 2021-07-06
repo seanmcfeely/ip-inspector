@@ -8,7 +8,7 @@ from tests import *
 def test_version():
     from ip_inspector import __version__
 
-    assert __version__ == "0.1.10"
+    assert __version__ == "0.1.11"
 
 
 def test_inspector_contruction():

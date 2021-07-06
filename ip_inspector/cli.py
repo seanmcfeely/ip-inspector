@@ -39,7 +39,7 @@ def build_parser(parser: argparse.ArgumentParser):
         "-r", "--json", dest="raw_results", action="store_true", help="return results in their raw json format"
     )
     parser.add_argument("-pp", "--pretty-print", action="store_true", help="Pretty print the raw json results")
-    parser.add_argument("-i", "--ip", action="store", help="A single IP address to inspect.")
+    parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="A single IP address to inspect. You can supply this argument more than once.")
     parser.add_argument("--print-tor-exits", action="store_true", help="Get tor exist nodes")
     parser.add_argument(
         "-f",
@@ -106,7 +106,7 @@ def build_parser(parser: argparse.ArgumentParser):
 
     wl_subparser = wl_parser.add_subparsers(dest="wl_command")
     wl_add_parser = wl_subparser.add_parser("add", help="Append to a whitelist.")
-    wl_add_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    wl_add_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     wl_add_parser.add_argument(
         "-t",
         "--whitelist-type",
@@ -120,7 +120,7 @@ def build_parser(parser: argparse.ArgumentParser):
     )
 
     wl_remove_parser = wl_subparser.add_parser("remove", help="Remove a whitelist entry.")
-    wl_remove_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    wl_remove_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     wl_remove_parser.add_argument(
         "-t",
         "--whitelist-type",
@@ -142,7 +142,7 @@ def build_parser(parser: argparse.ArgumentParser):
 
     bl_subparser = bl_parser.add_subparsers(dest="bl_command")
     bl_add_parser = bl_subparser.add_parser("add", help="Append to a blacklist.")
-    bl_add_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    bl_add_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     bl_add_parser.add_argument(
         "-t",
         "--blacklist-type",
@@ -156,7 +156,7 @@ def build_parser(parser: argparse.ArgumentParser):
     )
 
     bl_remove_parser = bl_subparser.add_parser("remove", help="Remove a blacklist entry.")
-    bl_remove_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    bl_remove_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     bl_remove_parser.add_argument(
         "-t",
         "--blacklist-type",
@@ -270,13 +270,7 @@ def execute(args: argparse.Namespace):
                         print(wl)
                     return True
 
-        ip_list = []
-        if args.ip:
-            ip = args.ip
-            if "/" in ip:
-                ip = ip[: ip.rfind("/")]
-            ip_list.append(ip)
-
+        ip_list = args.ip_list
         if args.from_stdin:
             ip_list = [line.strip() for line in sys.stdin]
 
@@ -365,20 +359,20 @@ def execute(args: argparse.Namespace):
                     print(iip)
         return
 
-    if args.ip:
-        iip = mmi.inspect(args.ip, infrastructure_context=infrastructure_context_map[args.context])
-        if iip:
-            if args.raw_results:
-                print(json.dumps(iip.to_dict()))
-            elif args.pretty_print:
-                pprint(iip.to_dict())
-            elif args.fields:
-                for field in args.fields:
-                    print(iip.get(field))
-            else:
-                print(iip)
-            return True
-        return False
+    if args.ip_list:
+        for ip in args.ip_list:
+            iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
+            if iip:
+                if args.raw_results:
+                    print(json.dumps(iip.to_dict()))
+                elif args.pretty_print:
+                    pprint(iip.to_dict())
+                elif args.fields:
+                    for field in args.fields:
+                        print(iip.get(field))
+                else:
+                    print(iip)
+        return True
 
     return
 

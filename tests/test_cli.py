@@ -49,7 +49,7 @@ def test_main_inspection(test_database, capsys):
     assert "GOOGLE (!BLACKLISTED!)" in captured.out
     assert main(["-i", ipi.ip, "-c", "test_default_context", "-f", "ORG"]) == True
     captured = capsys.readouterr()
-    assert "GOOGLE\n" == captured.out
+    assert "GOOGLE (!BLACKLISTED!)\n" == captured.out
 
 
 def test_main_json_output(test_database, capsys):
@@ -101,3 +101,14 @@ def test_main_listing_functions(test_database, capsys):
     assert main(["-c", "test_default_context", "whitelist", "add", "-i", ipi.ip, "-t", "ASN"]) == None
     captured = capsys.readouterr()
     assert "created: Whitelist" in captured.err
+
+
+def test_custom_parser_adoption(test_database):
+    import argparse
+    from ip_inspector.cli import build_parser, execute
+
+    parser = argparse.ArgumentParser(description="Test Parser")
+    assert build_parser(parser) == None
+    args = ["blacklist", "-p"]
+    args = parser.parse_args(args)
+    assert execute(args) == True

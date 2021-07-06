@@ -140,24 +140,39 @@ class Inspected_IP(maxmind.MaxMind_IP):
 
     @property
     def summary_string(self):
-        return f"Inspected_IP: {self.ip} - ORG:{self.get('ORG')} - ASN:{self.get('ASN')} - Country:{self.get('Country')}"
+        # for reference
+        return (
+            f"Inspected_IP: {self.ip} - ORG:{self.get('ORG')} - ASN:{self.get('ASN')} - Country:{self.get('Country')}"
+        )
 
     def __str__(self):
         txt = "\t--------------------\n"
         for field in self.map:
-            if field == "IP" and self.is_tor:
-                txt += f"\t{field}: {self.get(field)} (TOR EXIT)\n"
-            elif self.get(field):
-                if field in self.blacklisted_fields:
-                    txt += f"\t{field}: {self.get(field)} {self._blacklist_str}\n"
-                elif field in self.whitelisted_fields:
-                    txt += f"\t{field}: {self.get(field)} {self._whitelist_str}\n"
-                else:
-                    txt += f"\t{field}: {self.get(field)}\n"
+            if self.get(field):
+                txt += f"\t{field}: {self.get(field)}\n"
             else:
                 txt += f"\t{field}: \n"
         return txt
 
+    def get(self, field):
+        # override the maxmind get method
+        if field == "IP" and self.is_tor:
+            return f"{self.map.get(field)} (TOR EXIT)"
+        if field in self.blacklisted_fields:
+            return f"{self.map.get(field)} {self._blacklist_str}"
+        if field in self.whitelisted_fields:
+            return f"{self.map.get(field)} {self._whitelist_str}"
+        return self.map.get(field, None)
+
+    def to_dict(self):
+        data = {}
+        data["maxmind"] = self.raw
+        data["tor_exit"] = True if self.is_tor else False
+        data["blacklist_reasons"] = self._blacklist_reasons
+        data["blacklisted_fields"] = self._blacklisted_fields
+        data["whitelist_reasons"] = self._whitelist_reasons
+        data["whitelisted_fields"] = self._whitelisted_fields
+        return data
 
 
 class Inspector:
@@ -171,9 +186,12 @@ class Inspector:
         maxmind_license_key: A MaxMind license key.
         tor_exits: An optional list of tor_exit nodes. Eh.
     """
-    def __init__(self, maxmind_license_key: str, tor_exits: Union[tor.ExitNodes, None] = tor.ExitNodes() or None):
-        self.mmc = maxmind.Client(license_key=maxmind_license_key)
+
+    def __init__(self, maxmind_license_key: str, tor_exits: bool = True, **requests_kwargs):
+        self.mmc = maxmind.Client(license_key=maxmind_license_key, **requests_kwargs)
         self.tor_exits = tor_exits
+        if tor_exits:
+            self.tor_exits = tor.ExitNodes(**requests_kwargs)
 
     def inspect(self, ip, infrastructure_context: Union[str, int] = DEFAULT_INFRASTRUCTURE_CONTEXT_ID):
         """Get IP metadata and enrich with InfrastructureContext Blacklist/Whitelist hits.
@@ -189,15 +207,21 @@ class Inspector:
             network = None
             if "/" in ip:
                 network = ip
-                ip = ip[:ip.rfind("/")]
+                ip = ip[: ip.rfind("/")]
                 LOGGER.debug(f"removing network component from {network}: using {ip}")
+
+            tor_exit = False
+            if self.tor_exits:
+                tor_exit = self.tor_exits.is_exit_node(ip)
+
             IIP = Inspected_IP(
                 self.mmc.asn(ip),
                 self.mmc.city(ip),
                 self.mmc.country(ip),
-                tor_exit_node=self.tor_exits.is_exit_node(ip),
+                tor_exit_node=tor_exit,
                 _infrastructure_context=infrastructure_context,
             )
+
             if network:
                 IIP.network_value_passed = network
             with get_db_session() as session:
@@ -223,8 +247,8 @@ class Inspector:
 
             return IIP
         except ValueError:
-                LOGGER.warning(f"{ip} is not a valid ipv4 or ipv6")
-                return None
+            LOGGER.warning(f"{ip} is not a valid ipv4 or ipv6")
+            return None
         except Exception as e:
             LOGGER.warning(f"Problem inspecting ip={ip} : {e}")
             return False
@@ -268,7 +292,9 @@ def append_to_(
     # Don't allow whitelisting and blacklisting under the same context
     # Just in case this Inspected_IP is not up-to-date, we spend the cycles to refresh() it.
     iip.refresh()
-    LOGGER.debug(f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}")
+    LOGGER.debug(
+        f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}"
+    )
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
@@ -295,18 +321,19 @@ def append_to_(
         return None
     # first, set field values if the field was passed
     # NOTE: min of one value is required. Warn if the value requested does not evaluate.
+    # get the raw values directly from the map
     org = asn = country = None
     for field in fields:
         if field == "ORG":
-            org = iip.get(field)
+            org = iip.map.get(field)
             if not org:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "ASN":
-            asn = iip.get(field)
+            asn = iip.map.get(field)
             if not asn:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "Country":
-            country = iip.get(field)
+            country = iip.map.get(field)
             if not country:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
 
@@ -352,22 +379,25 @@ def remove_from_(
         raise ValueError(f"{list_type} is not valid. Must be one of [blacklist, whitelist]")
     # make sure Inspected_IP up-to-date
     iip.refresh()
-    LOGGER.debug(f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}")
+    LOGGER.debug(
+        f"appending any values of requested fields={fields} to {list_type} of context={context_id} for {iip.summary_string}"
+    )
     if context_id != iip._infrastructure_context:
         LOGGER.error(f"{iip.ip} inspected under different infrastructure context")
         return False
+    # store the raw values directly from the map
     org = asn = country = None
     for field in fields:
         if field == "ORG":
-            org = iip.get(field)
+            org = iip.map.get(field)
             if not org:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "ASN":
-            asn = iip.get(field)
+            asn = iip.map.get(field)
             if not asn:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
         if field == "Country":
-            country = iip.get(field)
+            country = iip.map.get(field)
             if not country:
                 LOGGER.warning(f"No value for request {field} field => {iip.summary_string}")
 

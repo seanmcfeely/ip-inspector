@@ -8,7 +8,7 @@ from tests import *
 def test_version():
     from ip_inspector import __version__
 
-    assert __version__ == "0.1.3"
+    assert __version__ == "0.1.12"
 
 
 def test_inspector_contruction():
@@ -74,8 +74,8 @@ def test_inspected_ip(test_database):
     assert iip.set_whitelist(blacklist_results) == False
     # assert string output looks correct
     # ORG: GOOGLE (!BLACKLISTED!)
-    assert "ORG: GOOGLE (!BLACKLISTED!)" == f"ORG: {iip.get('ORG')} {iip._blacklist_str}"
-    assert f"ORG: {iip.get('ORG')} {iip._blacklist_str}" in str(iip)
+    assert "ORG: GOOGLE (!BLACKLISTED!)" == f"ORG: {iip.get('ORG')}"
+    assert "ORG: GOOGLE (!BLACKLISTED!)" in str(iip)
     iip.remove_blacklist()
     assert iip.is_blacklisted == False
 
@@ -86,8 +86,8 @@ def test_inspected_ip(test_database):
     assert iip.set_whitelist(whitelist_results) == True
     assert iip.is_whitelisted == True
     assert iip.is_blacklisted == False
-    assert "ORG: GOOGLE (whitelisted)" == f"ORG: {iip.get('ORG')} {iip._whitelist_str}"
-    assert f"ORG: {iip.get('ORG')} {iip._whitelist_str}" in str(iip)
+    assert "ORG: GOOGLE (whitelisted)" == f"ORG: {iip.get('ORG')}"
+    assert "ORG: GOOGLE (whitelisted)" in str(iip)
     assert iip.whitelisted_fields == ["ORG"]
     iip.remove_whitelist()
     assert iip.is_whitelisted == False
@@ -123,7 +123,8 @@ def test_append_to_(fresh_database):
     result = append_to_("blacklist", iip, fields=["ASN", "ORG", "Country"], context_id=1)
     assert isinstance(result, BlacklistEntry)
     # but, the only field that's not None should be Country (because previous entries already have the other field values)
-    assert result.country == iip.get("Country") and result.org is None and result.asn is None
+    # NOTE: we use the iip.map.get() method here instead of iip.get() because iip.get() will include the BLACKLISTED! str.
+    assert result.country == iip.map.get("Country") and result.org is None and result.asn is None
     # For the sake of avoiding ambiguous confusion, False if iip._infrastructure_context does not match
     assert iip._infrastructure_context == 1
     assert append_to_("blacklist", iip, fields=["ORG"], context_id=5) == False

@@ -38,7 +38,9 @@ Here are some quick examples of how to using `ip-inspector` on the CLI.
 
 ### Look up a single IP address:
 
-Use the `-i` option, example: `ip-inspector -i 8.8.8.8`
+Use the `-i` option to look up an IP address. The `-i` option can be supplied multiple times if you want to look up more than one IP address.
+
+Example: `ip-inspector -i 8.8.8.8`
 
 ```console
 $  ip-inspector -i 8.8.8.8
@@ -180,3 +182,6 @@ $ ip-inspector --delete-tracking-context 2
 2021-07-01 18:24:44 analysis ip-inspector.cli[2153] INFO deleted infrastructure context.
 ```
 
+## More Documentation
+
+Open a GitHub issue with any questions and I will do my best to answer quickly. I'll create documentation that does the same. In the mean time, more documentation might exist on [this how-to page](./docs/how-to.md).

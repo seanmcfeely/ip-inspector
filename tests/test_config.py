@@ -59,11 +59,19 @@ def test_load_configuration():
     config = load_configuration()
     assert not config["maxmind"]["license_key"]
     assert not CONFIG["maxmind"]["license_key"]
-    # without a saved configuration, load_configuration is OVERRIDE
-    assert config["default"]["work_dir"] == "OVERRIDE"
+    # environment variable for work_dir continues to override everything
+    assert config["default"]["work_dir"] == TEST_WORK_DIR
     # save the work dir
-    overrides = {"default": {"work_dir": TEST_WORK_DIR}}
+    overrides = {"default": {"work_dir": "this/is/bogus"}}
+    # environment variable for work_dir continues to override everything
     save_configuration(overrides, config_path=SAVED_CONFIG_PATH)
     config = load_configuration(saved_config_path=SAVED_CONFIG_PATH)
     assert config["default"]["work_dir"] == WORK_DIR == TEST_WORK_DIR
     assert CONFIG == config
+
+    config = load_configuration(saved_config_path=SAVED_CONFIG_PATH)
+    assert "tracking_context" not in config["default"]
+    overrides = {"default": {"tracking_context": "ztestingz"}}
+    save_configuration(overrides, config_path=SAVED_CONFIG_PATH)
+    config = load_configuration(saved_config_path=SAVED_CONFIG_PATH)
+    assert config["default"]["tracking_context"] == "ztestingz"

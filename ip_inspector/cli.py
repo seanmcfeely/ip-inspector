@@ -28,22 +28,27 @@ from ip_inspector.database import (
 LOGGER = logging.getLogger("ip-inspector.cli")
 
 
-def main(args=None):
-    """The main CLI entry point."""
+def build_parser(parser: argparse.ArgumentParser):
+    """Build the CLI Argument parser."""
 
-    if not args:
-        args = sys.argv[1:]
-
-    parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Turn on debug logging.")
     parser.add_argument(
         "-u", "--update-databases", default=False, action="store_true", help="Update the MaxMind GeoLite2 Databases"
     )
     parser.add_argument(
+        "-db-age", "--check-database-age", default=False, action="store_true", help="Check the age of the MaxMind GeoLite2 Databases"
+    )
+    parser.add_argument(
         "-r", "--json", dest="raw_results", action="store_true", help="return results in their raw json format"
     )
     parser.add_argument("-pp", "--pretty-print", action="store_true", help="Pretty print the raw json results")
-    parser.add_argument("-i", "--ip", action="store", help="A single IP address to inspect.")
+    parser.add_argument(
+        "-i",
+        "--ip",
+        dest="ip_list",
+        action="append",
+        help="A single IP address to inspect. You can supply this argument more than once.",
+    )
     parser.add_argument("--print-tor-exits", action="store_true", help="Get tor exist nodes")
     parser.add_argument(
         "-f",
@@ -88,7 +93,8 @@ def main(args=None):
     with get_db_session() as session:
         infrastructure_context_map = get_infrastructure_context_map(session)
     context_choices = list(infrastructure_context_map.keys())
-    default_context_id = infrastructure_context_map.get(default_context_name, 1)
+    if default_context_name not in context_choices:
+        LOGGER.warning(f"configured {default_context_name} is not a context in the database.")
     parser.add_argument(
         "-c",
         "--context",
@@ -111,7 +117,7 @@ def main(args=None):
 
     wl_subparser = wl_parser.add_subparsers(dest="wl_command")
     wl_add_parser = wl_subparser.add_parser("add", help="Append to a whitelist.")
-    wl_add_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    wl_add_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     wl_add_parser.add_argument(
         "-t",
         "--whitelist-type",
@@ -125,7 +131,7 @@ def main(args=None):
     )
 
     wl_remove_parser = wl_subparser.add_parser("remove", help="Remove a whitelist entry.")
-    wl_remove_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    wl_remove_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     wl_remove_parser.add_argument(
         "-t",
         "--whitelist-type",
@@ -147,7 +153,7 @@ def main(args=None):
 
     bl_subparser = bl_parser.add_subparsers(dest="bl_command")
     bl_add_parser = bl_subparser.add_parser("add", help="Append to a blacklist.")
-    bl_add_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    bl_add_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     bl_add_parser.add_argument(
         "-t",
         "--blacklist-type",
@@ -161,7 +167,7 @@ def main(args=None):
     )
 
     bl_remove_parser = bl_subparser.add_parser("remove", help="Remove a blacklist entry.")
-    bl_remove_parser.add_argument("-i", "--ip", action="store", help="The IP address to work with.")
+    bl_remove_parser.add_argument("-i", "--ip", dest="ip_list", action="append", help="The IP address to work with.")
     bl_remove_parser.add_argument(
         "-t",
         "--blacklist-type",
@@ -174,15 +180,26 @@ def main(args=None):
         "-r", "--reference", action="store", default=None, help="Remove entries with this reference."
     )
 
-    argcomplete.autocomplete(parser)
-    args = parser.parse_args(args)
 
-    # configure logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - [%(levelname)s] %(message)s")
-    coloredlogs.install(level="INFO", logger=LOGGER)
+def execute(args: argparse.Namespace):
+    """Execute arguments."""
 
     if args.debug:
         coloredlogs.install(level="DEBUG", logger=LOGGER)
+
+    infrastructure_context_map = {}
+    default_context_name = CONFIG["default"].get("tracking_context", DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
+    with get_db_session() as session:
+        infrastructure_context_map = get_infrastructure_context_map(session)
+
+    if default_context_name not in infrastructure_context_map.keys():
+        if default_context_name != DEFAULT_INFRASTRUCTURE_CONTEXT_NAME:
+            LOGGER.error(
+                f"configured {default_context_name} is not a context in the database. Check your config overrides with `ip-inspector --customize`."
+            )
+        else:
+            LOGGER.critical(f"The infrastructure tracking database is missing the reqired default context.")
+        # let an exception raise
 
     if args.print_tor_exits:
         for EN in tor.ExitNodes().exit_nodes:
@@ -257,6 +274,15 @@ def main(args=None):
             return False
         return True
 
+    # Let this function log a warning if the GeoLite2 databases are old.
+    up_to_date = maxmind.are_database_files_up_to_date()
+    if args.check_database_age:
+        if up_to_date:
+            print("Databases appear to be up to date.")
+        else:
+            print("Databases are either old or they do not exist.")
+        return True
+
     ## IP Inspection ##
     mmi = Inspector(maxmind_license_key=CONFIG["maxmind"]["license_key"])
 
@@ -273,13 +299,7 @@ def main(args=None):
                         print(wl)
                     return True
 
-        ip_list = []
-        if args.ip:
-            ip = args.ip
-            if "/" in ip:
-                ip = ip[: ip.rfind("/")]
-            ip_list.append(ip)
-
+        ip_list = args.ip_list
         if args.from_stdin:
             ip_list = [line.strip() for line in sys.stdin]
 
@@ -348,9 +368,9 @@ def main(args=None):
             iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
             if iip:
                 if args.raw_results:
-                    print(json.dumps(iip.raw))
+                    print(json.dumps(iip.to_dict()))
                 elif args.pretty_print:
-                    pprint(iip.raw)
+                    pprint(iip.to_dict())
                 elif args.fields:
                     result_string = f"--> {iip.network_value_passed if iip.network_value_passed else iip.ip}"
                     if args.csv:
@@ -368,19 +388,37 @@ def main(args=None):
                     print(iip)
         return
 
-    if args.ip:
-        iip = mmi.inspect(args.ip, infrastructure_context=infrastructure_context_map[args.context])
-        if iip:
-            if args.raw_results:
-                print(json.dumps(iip.raw))
-            elif args.pretty_print:
-                pprint(iip.raw)
-            elif args.fields:
-                for field in args.fields:
-                    print(iip.get(field))
-            else:
-                print(iip)
-            return True
-        return False
+    if args.ip_list:
+        for ip in args.ip_list:
+            iip = mmi.inspect(ip, infrastructure_context=infrastructure_context_map[args.context])
+            if iip:
+                if args.raw_results:
+                    print(json.dumps(iip.to_dict()))
+                elif args.pretty_print:
+                    pprint(iip.to_dict())
+                elif args.fields:
+                    for field in args.fields:
+                        print(iip.get(field))
+                else:
+                    print(iip)
+        return True
 
     return
+
+
+def main(args=None):
+    """The main CLI entry point."""
+
+    # configure logging
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - [%(levelname)s] %(message)s")
+    coloredlogs.install(level="INFO", logger=LOGGER)
+
+    if not args:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description="Inspect IP address metadata for IDR purposes")
+    build_parser(parser)
+    argcomplete.autocomplete(parser)
+    args = parser.parse_args(args)
+
+    return execute(args)

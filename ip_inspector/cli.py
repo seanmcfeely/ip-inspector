@@ -36,6 +36,9 @@ def build_parser(parser: argparse.ArgumentParser):
         "-u", "--update-databases", default=False, action="store_true", help="Update the MaxMind GeoLite2 Databases"
     )
     parser.add_argument(
+        "-db-age", "--check-database-age", default=False, action="store_true", help="Check the age of the MaxMind GeoLite2 Databases"
+    )
+    parser.add_argument(
         "-r", "--json", dest="raw_results", action="store_true", help="return results in their raw json format"
     )
     parser.add_argument("-pp", "--pretty-print", action="store_true", help="Pretty print the raw json results")
@@ -272,7 +275,13 @@ def execute(args: argparse.Namespace):
         return True
 
     # Let this function log a warning if the GeoLite2 databases are old.
-    maxmind.are_database_files_up_to_date()
+    up_to_date = maxmind.are_database_files_up_to_date()
+    if args.check_database_age:
+        if up_to_date:
+            print("Databases appear to be up to date.")
+        else:
+            print("Databases are either old or they do not exist.")
+        return True
 
     ## IP Inspection ##
     mmi = Inspector(maxmind_license_key=CONFIG["maxmind"]["license_key"])

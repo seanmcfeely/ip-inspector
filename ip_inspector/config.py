@@ -34,7 +34,7 @@ DATA_DIR = os.path.join(WORK_DIR, "data")
 # Any overrides the user provides, such as the maxmind license key are saved here.
 SAVED_CONFIG_PATH = os.path.join(WORK_DIR, ETC_DIR, "local.config.overrides.json")
 # System level overrides can be supplied here:
-SYSTEM_CONFIG_PATH = os.path.join("etc", "ip_inspector", "system.config.overrides.json") 
+SYSTEM_CONFIG_PATH = os.path.join(os.sep, "etc", "ip_inspector", "system.config.overrides.json") 
 
 def _create_data_structure():
     """Create the required directory structure."""
@@ -124,12 +124,19 @@ def load_configuration(config_path: str = DEFAULT_CONFIG_PATH, saved_config_path
     # load the default config
     config = _load_yaml_defaults(config_path)
 
-    # load any saved overrides and update the config
+    # load any saved system overrides and update the config, unless an environment variable tells us otherwise
+    ignore_system_config = os.environ.get("IP_INSPECTOR_IGNORE_SYSTEM_CONFIG")
+    if ignore_system_config and ignore_system_config.lower() == "true":
+        ignore_system_config = True
+    if not ignore_system_config and os.path.exists(SYSTEM_CONFIG_PATH):
+        config = _update_config_dictionary(config, _load_saved_json(SYSTEM_CONFIG_PATH))
+
+    # load any saved user-level overrides and update the config
     config = _update_config_dictionary(config, _load_saved_json(saved_config_path))
 
-    # load any saved system overrides and update the config
-    if os.path.exists(SYSTEM_CONFIG_PATH):
-        config = _update_config_dictionary(config, _load_saved_json(SYSTEM_CONFIG_PATH))
+    # work dir environment variable overrides everything for work_dir
+    if "IP_INSPECTOR_WORK_DIR_PATH" in os.environ:
+        config["default"]["work_dir"] = os.environ["IP_INSPECTOR_WORK_DIR_PATH"]
 
     return config
 

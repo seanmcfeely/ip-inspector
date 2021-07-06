@@ -1,4 +1,3 @@
-import os
 import sys
 import pytest
 
@@ -51,6 +50,15 @@ def test__validate_database_file_paths():
     assert len(valid_database_paths) == 3
     assert TEST_DATA_DIR in list(valid_database_paths.values())[0]
 
+def test_are_database_files_up_to_date():
+    from ip_inspector.maxmind import are_database_files_up_to_date
+
+    system_database_files = {'asn': "fake", "country": "fake", "city": "fake"}
+    local_database_files = system_database_files
+    assert are_database_files_up_to_date(database_files=local_database_files, system_database_files=system_database_files) == False
+    # NOTE: lazy test as not removing system level databases from scope
+    # so they eiter are old or not or non-existant. False or True.
+    assert are_database_files_up_to_date() in [False, True]
 
 def test_maxmind_client_api():
     # requires system or local databases

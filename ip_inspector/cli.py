@@ -84,6 +84,8 @@ def build_parser(parser: argparse.ArgumentParser):
     with get_db_session() as session:
         infrastructure_context_map = get_infrastructure_context_map(session)
     context_choices = list(infrastructure_context_map.keys())
+    if default_context_name not in context_choices:
+        LOGGER.warning(f"configured {default_context_name} is not a context in the database.")
     parser.add_argument(
         "-c",
         "--context",
@@ -173,13 +175,20 @@ def build_parser(parser: argparse.ArgumentParser):
 def execute(args: argparse.Namespace):
     """Execute arguments."""
 
+    if args.debug:
+        coloredlogs.install(level="DEBUG", logger=LOGGER)
+
     infrastructure_context_map = {}
     default_context_name = CONFIG["default"].get("tracking_context", DEFAULT_INFRASTRUCTURE_CONTEXT_NAME)
     with get_db_session() as session:
         infrastructure_context_map = get_infrastructure_context_map(session)
 
-    if args.debug:
-        coloredlogs.install(level="DEBUG", logger=LOGGER)
+    if default_context_name not in infrastructure_context_map.keys():
+        if default_context_name != DEFAULT_INFRASTRUCTURE_CONTEXT_NAME:
+            LOGGER.error(f"configured {default_context_name} is not a context in the database. Check your config overrides with `ip-inspector --customize`.")
+        else:
+            LOGGER.critical(f"The infrastructure tracking database is missing the reqired default context.")
+        # let an exception raise
 
     if args.print_tor_exits:
         for EN in tor.ExitNodes().exit_nodes:
@@ -253,6 +262,9 @@ def execute(args: argparse.Namespace):
         if not maxmind.update_databases(license_key=CONFIG["maxmind"]["license_key"]):
             return False
         return True
+
+    # Let this function log a warning if the GeoLite2 databases are old.
+    maxmind.are_database_files_up_to_date()
 
     ## IP Inspection ##
     mmi = Inspector(maxmind_license_key=CONFIG["maxmind"]["license_key"])

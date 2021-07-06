@@ -4,6 +4,7 @@ import io
 import os
 import sys
 import shutil
+import time
 import tarfile
 import logging
 import requests
@@ -64,6 +65,21 @@ def get_local_md5_record(database_name):
             var_md5 = fp.read()
         LOGGER.info(f"Got md5={var_md5} for local {database_name}.tar.gz")
         return var_md5
+    return False
+
+
+def get_database_age(database_path):
+    """Get the age in seconds since this MaxMind GeoLite2 database was written.
+
+    Args:
+        database_path: The path to the database.
+
+    Returns:
+        An integer representing the age in seconds of the MaxMind database.
+    """
+    if os.path.exists(database_path):
+        return time.time() - os.path.getmtime(database_path)
+    LOGGER.error(f"{database_path} does not exist.")  
     return False
 
 
@@ -189,6 +205,7 @@ def _validate_database_file_paths(
             LOGGER.warning(f"Couldn't find local or system '{db}' database")
     return valid_database_paths
 
+
 def get_database_locations(
     license_key=CONFIG["maxmind"]["license_key"],
     database_files=CONFIG["maxmind"]["local_database_files"],
@@ -211,6 +228,43 @@ def get_database_locations(
             database_files=database_files, system_database_files=system_database_files
         )
     return database_file_paths
+
+
+def are_database_files_up_to_date(
+    database_files=CONFIG["maxmind"]["local_database_files"],
+    system_database_files=CONFIG["maxmind"]["system_default_database_files"]
+):
+    """Are the databases old? 
+
+    Considers databases to be current if they're younger than 7 days old.
+
+    Args:
+        database_files: list of any local GeoLite2 database file paths.
+        system_database_files: list of default locations for GeoLite2 databases.
+
+    Returns:
+        True if the databases are up-to-date. False otherwise.
+    """
+    database_file_path_map = database_file_paths = _validate_database_file_paths(
+            database_files=database_files, system_database_files=system_database_files
+        )
+    database_file_paths = database_file_path_map.values()    
+
+    if not database_file_paths:
+        LOGGER.warning(f"no databases were found.")
+        return False
+
+    one_day = 86400 #seconds
+    # This is an all or nothing check.
+    up_to_date = True
+    for db_path in database_file_paths:
+        age = get_database_age(db_path)
+        if age > (7 * one_day):
+            days = int(age/one_day)
+            LOGGER.warning(f"{db_path} is more than {days} days old.")
+            up_to_date = False
+
+    return up_to_date
 
 
 class MaxMind_IP(object):

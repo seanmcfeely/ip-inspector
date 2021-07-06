@@ -6,17 +6,36 @@ Depending on your use cases and/or preferences, you can either use `ip-inspector
 
 MaxMind provides the [geoipupdate](https://dev.maxmind.com/geoip/geoipupdate/) tool for keeping your system databases updated. Follow their instructions, supply your [license key](https://www.maxmind.com/en/geolite2/signup), and set up your cronjob.
 
+Example config @  `/etc/GeoIP.conf` :
+
+```
+# For more information about this config file, visit the docs at
+# https://dev.maxmind.com/geoip/geoipupdate/.
+
+# `AccountID` is from your MaxMind account.
+AccountID 0123456789
+
+# `LicenseKey` is from your MaxMind account
+LicenseKey v8asdfjkhfakes
+
+# `EditionIDs` is from your MaxMind account.
+EditionIDs GeoLite2-ASN GeoLite2-City GeoLite2-Country
+
+Proxy proxy.address:proxy_port
+ProxyUserPassword user:pass
+```
+
 Cron job:
 
 ```
-14 5 * * 6 geoipupdate
+49 5 * * 1,4 /usr/local/bin/geoipupdate
 ```
 
 ### Using IP Inspector
 
- If you want to use ip-inspector to download and maintain your GeoLite2 databases, you will need to provide the license key. There are a couple of ways to supply that license key, depending on how you want to use ip-inspector.
+ If you want to use ip-inspector to download and maintain your GeoLite2 databases, you will need to provide the license key. The easiest method is to supply the key on the command line.
 
-Supplying on the command line will save your license key for future use:
+Supplying the license key via the command line will save the key for future use by the current user. Example:
 
 ```console
 $ ip-inspector -lk 'your_license_key'
@@ -28,7 +47,7 @@ Next, with the license key, you can use the update command to download the most 
 $ ip-inspector -u
 ```
 
-Now, you can call the above with a cron job. Don't forget to set your environment variables, as needed. TODO: provide bash script to call the cron job with.
+Now, you could call the above with a cron job. Don't forget to set your environment variables, as needed.
 
 #### The Update Code:
 
@@ -43,5 +62,9 @@ if maxmind.update_databases(license_key=license_key, proxies=proxies):
     logging.info("successfully updated the MaxMind GeoLite2 databases.")
 ```
 
+
 ---
-[Click here](../../README.md) to go back to the main page.
+*Navigation*
+
+- [Home](../../README.md)
+- [Guide](../how-to.md)

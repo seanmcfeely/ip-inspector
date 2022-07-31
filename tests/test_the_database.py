@@ -225,7 +225,7 @@ def test_check_blacklist(test_database):
     with get_db_session() as session:
         # nothing begets nothing
         result = check_blacklist(session)
-        assert result is False
+        assert result == []
         result = check_blacklist(session, org="GOOGLE")
         assert len(result) == 2
         assert isinstance(result[0], BlacklistEntry)
@@ -237,7 +237,7 @@ def test_check_blacklist(test_database):
         assert len(result) == 1
         assert result[0].org == "float stack void"
         # nothing still begets nothing
-        assert check_blacklist(session, context=1) is False
+        assert check_blacklist(session, context=1) == []
 
 
 def test_check_whitelist(test_database):

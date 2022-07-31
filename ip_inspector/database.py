@@ -433,14 +433,14 @@ def check_blacklist(
         LOGGER.info(
             "blacklist checking requires one of [ORG, ASN, Country]. Do a direct DB query if you need something special."
         )
-        return False
+        return []
     context_id = context
     if context and isinstance(context, str):
         # assume name and lookup
         icontext = get_infrastructure_context_by_name(db, context)
         if not icontext:
             LOGGER.warning(f"no infrastructure by context by name '{context}")
-            return None
+            return []
         context_id = icontext.id
     if context_id and isinstance(context_id, int):
         bl_query = db.query(BlacklistEntry).filter(BlacklistEntry.infrastructure_id == context_id)

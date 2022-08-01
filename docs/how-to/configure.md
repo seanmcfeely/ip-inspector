@@ -4,9 +4,13 @@ If you're doing anything other than using `ip-inspector` on the command line, yo
 
 Configuration items can be overridden on a system and user level. Config items take the following precedence, where items found later override earlier ones:
 
-1. System Level
-2. User level
-3. Special Environment Variables
+1. Default: ip_inspector/etc/default.config.yaml
+2. System YAML overrides found at:
+   - /etc/ip_inspector/ip-inspector.yaml
+    - /opt/ace/etc/ip-inspector.yaml
+3. System Level JSON
+4. User level JSON
+5. Special Environment Variables
 
 > The `ip-inspector --customize` command will write a local copy of the current config, to a file named `ip_inspector.config.json` in the current working directory.
 > You can use this copy of the current config to help you make the changes you desire. 

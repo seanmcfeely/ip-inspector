@@ -17,10 +17,10 @@ def test_environment_variable_work_override():
 
 
 def test_configuration_defaults():
-    from ip_inspector.config import _load_yaml_defaults
+    from ip_inspector.config import _load_yaml_configs
 
     # should just load the defaults
-    config = _load_yaml_defaults()
+    config = _load_yaml_configs()
     assert isinstance(config, dict)
     # account number and license should be empty by default
     assert not config["maxmind"]["account_number"]

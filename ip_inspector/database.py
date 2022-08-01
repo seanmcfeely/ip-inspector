@@ -10,15 +10,27 @@ from sqlalchemy import create_engine, Boolean, Column, ForeignKey, DateTime, Int
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy_utils import database_exists, create_database
 
-from ip_inspector.config import DATA_DIR
+from ip_inspector.config import DATA_DIR, CONFIG
 
 LOGGER = logging.getLogger("ip-inspector.database")
 
 DATABASE_PATH = f"{DATA_DIR}/tracking_database.sqlite"
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
+if CONFIG["database"]["postgres"]["enabled"]:
+    db_user = CONFIG["database"]["postgres"]["user"]
+    db_pass = CONFIG["database"]["postgres"]["pass"]
+    db_host = CONFIG["database"]["postgres"]["host"]
+    db_port = CONFIG["database"]["postgres"]["port"]
+    db_name = CONFIG["database"]["postgres"]["db_name"]
+    postgres_dsn = f"postgresql+pg8000://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    engine = create_engine(url=postgres_dsn)
+else:
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+
 
 Session = sessionmaker(autocommit=False, autoflush=True, bind=engine)
 
@@ -509,6 +521,9 @@ def create_tables():
     """Create the database tables."""
     Base.metadata.create_all(bind=engine)
 
+
+if not database_exists(engine.url):
+    create_database(engine.url)
 
 create_tables()
 

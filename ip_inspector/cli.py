@@ -36,7 +36,11 @@ def build_parser(parser: argparse.ArgumentParser):
         "-u", "--update-databases", default=False, action="store_true", help="Update the MaxMind GeoLite2 Databases"
     )
     parser.add_argument(
-        "-db-age", "--check-database-age", default=False, action="store_true", help="Check the age of the MaxMind GeoLite2 Databases"
+        "-db-age",
+        "--check-database-age",
+        default=False,
+        action="store_true",
+        help="Check the age of the MaxMind GeoLite2 Databases",
     )
     parser.add_argument(
         "-r", "--json", dest="raw_results", action="store_true", help="return results in their raw json format"

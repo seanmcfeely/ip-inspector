@@ -32,6 +32,19 @@ default:
     ORG: 'etc/org_whitelist.txt'
     ASN: 'etc/asn_whitelist.txt'
 
+# default is to use a local sqlite database but a postgres database is also supported.
+database:
+  local: true
+  # if postgres is enabled, it will be attempted and used before a local database.
+  postgres:
+      enabled: false
+      host:
+      pass:
+      user: postgres
+      port: 5432
+      db_name: ip_inspector
+  
+
 
 # TOR Exit Nodes
 tor:

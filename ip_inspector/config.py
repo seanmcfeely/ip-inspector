@@ -7,12 +7,12 @@ import yaml
 import logging
 import collections.abc
 
-from typing import Dict
+from typing import Dict, Mapping, List
 
 try:
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CLoader as Loader
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import Loader  # type: ignore
 
 LOGGER = logging.getLogger("ip-inspector.config")
 
@@ -31,6 +31,19 @@ ETC_DIR = os.path.join(WORK_DIR, "etc")
 VAR_DIR = os.path.join(WORK_DIR, "var")
 DATA_DIR = os.path.join(WORK_DIR, "data")
 
+
+CONFIG_SEARCH_PATHS = [
+    DEFAULT_CONFIG_PATH,
+]
+
+ignore_system_config = os.environ.get("IP_INSPECTOR_IGNORE_SYSTEM_CONFIG")
+if ignore_system_config and ignore_system_config.lower() == "true":
+    ignore_system_config = True  # type: ignore
+
+if not ignore_system_config:
+    CONFIG_SEARCH_PATHS.append("/etc/ip_inspector/ip-inspector.yaml")
+    CONFIG_SEARCH_PATHS.append("/opt/ace/etc/ip-inspector.yaml")
+
 # Any overrides the user provides, such as the maxmind license key are saved here.
 SAVED_CONFIG_PATH = os.path.join(WORK_DIR, ETC_DIR, "local.config.overrides.json")
 # System level overrides can be supplied here:
@@ -48,7 +61,7 @@ def _create_data_structure():
                 sys.exit(1)
 
 
-def _update_config_dictionary(existing_config: Dict, new_items: Dict) -> Dict:
+def _update_config_dictionary(existing_config: Dict, new_items: Mapping) -> Dict:
     """Update the existing config the new config items.
 
     Args:
@@ -85,28 +98,35 @@ def _load_saved_json(saved_config_path: str = SAVED_CONFIG_PATH) -> Dict:
     return saved
 
 
-def _load_yaml_defaults(config_path: str = DEFAULT_CONFIG_PATH) -> Dict:
-    """Load a YAML config.
+def _load_yaml_configs(config_paths: List[str] = CONFIG_SEARCH_PATHS) -> Dict:
+    """Load a YAML configs.
 
-    The default config is the only config in YAML format.
+    The default config is in YAML format. It's loaded first, and then any other
+    in the config search path.
 
     Args:
-        config_path: path to a YAML config that should be loaded.
+        config_paths: paths to YAML configs that should be loaded.
 
     Returns:
         A the config as a dictionary.
     """
-    config = None
-    try:
-        with open(config_path) as c:
-            config = yaml.load(c, Loader=Loader)
-    except:
-        LOGGER.exception("Problem loading config: {}".format(config_path))
-        return False
+    config: Dict = {}
+    for config_path in config_paths:
+        if os.path.exists(config_path):
+            try:
+                with open(config_path) as c:
+                    updated_config = _update_config_dictionary(config, yaml.load(c, Loader=Loader))
+            except:
+                LOGGER.exception("Problem loading config: {}".format(config_path))
+                return config
+            else:
+                config = updated_config
     return config
 
 
-def load_configuration(config_path: str = DEFAULT_CONFIG_PATH, saved_config_path: str = SAVED_CONFIG_PATH) -> Dict:
+def load_configuration(
+    config_paths: List[str] = CONFIG_SEARCH_PATHS, saved_config_path: str = SAVED_CONFIG_PATH
+) -> Dict:
     """Load configuration from config files.
 
     The default YAML `config_path` (default of `DEFAULT_CONFIG_PATH`) is always loaded first.
@@ -122,13 +142,15 @@ def load_configuration(config_path: str = DEFAULT_CONFIG_PATH, saved_config_path
         The configuration as a dictionary.
     """
 
-    # load the default config
-    config = _load_yaml_defaults(config_path)
+    # load the default config and any overrides.
+    config = _load_yaml_configs(config_paths)
+
+    # load additional config paths
 
     # load any saved system overrides and update the config, unless an environment variable tells us otherwise
     ignore_system_config = os.environ.get("IP_INSPECTOR_IGNORE_SYSTEM_CONFIG")
     if ignore_system_config and ignore_system_config.lower() == "true":
-        ignore_system_config = True
+        ignore_system_config = True  # type: ignore
     if not ignore_system_config and os.path.exists(SYSTEM_CONFIG_PATH):
         config = _update_config_dictionary(config, _load_saved_json(SYSTEM_CONFIG_PATH))
 

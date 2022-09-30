@@ -30,6 +30,23 @@ See [this page](docs/how-to/update-maxmind-databases.md) for help on how to keep
 pip install ip-inspector
 ```
 
+## Database
+
+For tracking infrastructure contextually, a local SQLite database is used by default. Support also exists for a PostgreSQL database, which, is helpful if you have several different analysts working from different locations. For example, you could configure a local Postgres database to be used like this:
+
+```shell
+$ cat /etc/ip_inspector/ip-inspector.yaml 
+database:
+  postgres:
+      enabled: true
+      host: localhost
+      pass: mysecretpassword
+	  user: postgres
+      port: 5432
+```
+
+See the [configuration docs](./docs/how-to/configure.md) for an explanation of the configuration options.
+
 ## Quick CLI Intro
 
 Here are some quick examples of how to using `ip-inspector` on the CLI.
@@ -129,7 +146,7 @@ $ cat interesting.ip.list | ip-inspector --from-stdin
 
 The following will add this Organization and ASN to the default whitelist.
 
-`ip-inspector whitelist add 8.8.8.8 -t ORG -t ASN`
+`ip-inspector whitelist add -i 8.8.8.8 -t ORG -t ASN`
 
 ```console
 $ ip-inspector whitelist add 8.8.8.8 -t ORG -t ASN
@@ -138,7 +155,7 @@ $ ip-inspector whitelist add 8.8.8.8 -t ORG -t ASN
 
 #### List Removals
 
-`ip-inspector whitelist remove 8.8.8.8`
+`ip-inspector whitelist remove -i 8.8.8.8`
 
 ```console
 $ ip-inspector whitelist remove 8.8.8.8

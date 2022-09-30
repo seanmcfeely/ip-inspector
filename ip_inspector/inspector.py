@@ -102,9 +102,9 @@ class Inspected_IP(maxmind.MaxMind_IP):
             blacklist_results = check_blacklist(
                 session,
                 context=self._infrastructure_context,
-                org=self.get("ORG"),
-                asn=self.get("ASN"),
-                country=self.get("Country"),
+                org=self.map.get("ORG"),
+                asn=self.map.get("ASN"),
+                country=self.map.get("Country"),
             )
             if blacklist_results:
                 self.set_blacklist(blacklist_results)
@@ -112,9 +112,9 @@ class Inspected_IP(maxmind.MaxMind_IP):
             whitelist_results = check_whitelist(
                 session,
                 context=self._infrastructure_context,
-                org=self.get("ORG"),
-                asn=self.get("ASN"),
-                country=self.get("Country"),
+                org=self.map.get("ORG"),
+                asn=self.map.get("ASN"),
+                country=self.map.get("Country"),
             )
             if whitelist_results:
                 self.set_whitelist(whitelist_results)
@@ -228,9 +228,9 @@ class Inspector:
                 blacklist_results = check_blacklist(
                     session,
                     context=infrastructure_context,
-                    org=IIP.get("ORG"),
-                    asn=IIP.get("ASN"),
-                    country=IIP.get("Country"),
+                    org=IIP.map.get("ORG"),
+                    asn=IIP.map.get("ASN"),
+                    country=IIP.map.get("Country"),
                 )
                 if blacklist_results:
                     IIP.set_blacklist(blacklist_results)
@@ -238,9 +238,9 @@ class Inspector:
                 whitelist_results = check_whitelist(
                     session,
                     context=infrastructure_context,
-                    org=IIP.get("ORG"),
-                    asn=IIP.get("ASN"),
-                    country=IIP.get("Country"),
+                    org=IIP.map.get("ORG"),
+                    asn=IIP.map.get("ASN"),
+                    country=IIP.map.get("Country"),
                 )
                 if whitelist_results:
                     IIP.set_whitelist(whitelist_results)

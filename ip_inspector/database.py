@@ -27,7 +27,10 @@ if CONFIG["database"]["postgres"]["enabled"]:
     db_port = CONFIG["database"]["postgres"]["port"]
     db_name = CONFIG["database"]["postgres"]["db_name"]
     postgres_dsn = f"postgresql+pg8000://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
-    engine = create_engine(url=postgres_dsn)
+    engine_args = CONFIG["database"]["postgres"].get("engine_args", {})
+    if not CONFIG["database"]["postgres"].get('connection_pooling', True):
+        engine_args['poolclass'] = NullPool
+    engine = create_engine(url=postgres_dsn, **engine_args)
 else:
     engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 

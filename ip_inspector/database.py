@@ -11,6 +11,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy.pool import NullPool
 
 from ip_inspector.config import DATA_DIR, CONFIG
 
